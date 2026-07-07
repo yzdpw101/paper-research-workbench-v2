@@ -6,15 +6,11 @@
  *                               [--mode launch|cdp]
  *
  * Max 10 papers, 500MB total. Requires institutional login (IP or CARSI SSO).
- *
- * Flow:
- *   Search → Select All / check N results → Download PDFs → confirm → Download → .zip
  */
 import { launch } from './browser-launcher.js';
 import { goto } from './navigator.js';
 import { get } from './config.js';
 import { getCDPDownloadDir, waitForZip } from './cdp-download.js';
-import { checkStatus } from './wf-carsi-login.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -46,61 +42,30 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
   try {
     await goto(page, searchUrl, { timeout: 60000, waitFor: '.results-actions-selectall' });
-    await new Promise(r => setTimeout(r, 3000));
-
-    // Check login (only for CDP mode where we can detect it)
-    if (dlMode === 'cdp') {
-      const loginStatus = await checkStatus(page);
-      // IEEE header check — look for institution name or access indicator
-      const hasAccess = await page.evaluate(() => {
-        const body = (document.body?.innerText || '').slice(0, 2000);
-        return /access provided by|institutional access|institution/i.test(body);
-      });
-      if (!hasAccess && !loginStatus.loggedIn) {
-        console.log(JSON.stringify({ status: 'error', error: 'not logged in — run ieee-carsi-login.js first or use institutional network' }, null, 2));
-        await browser.close();
-        return;
-      }
-    }
+    await new Promise(r => setTimeout(r, 5000));
 
     // Select results
     await page.locator('label.results-actions-selectall').first().click();
     await new Promise(r => setTimeout(r, 500));
 
-    // Click Download PDFs
-    const dlPdfBtn = page.locator('button:has-text("Download PDFs"), a:has-text("Download PDFs")').first();
-    if (await dlPdfBtn.count() === 0) {
-      console.log(JSON.stringify({ status: 'error', error: 'Download PDFs button not found — may need login or different page layout' }, null, 2));
-      await browser.close();
-      return;
-    }
-    await page.locator("button.xpl-btn-primary:has-text(\\"Download PDFs\\")").first().click({ force: true });
-    await new Promise(r => setTimeout(r, 2000));
-
-    // Confirm download in modal
-    const confirmBtn = page.locator('button:has-text("Download")').first();
-    if (await confirmBtn.count() > 0) {
-      await page.evaluate(() => { const modal = document.querySelector("ngb-modal-window.d-block, .modal.show, [role=dialog]"); if (modal) { const btns = modal.querySelectorAll("button"); for (const b of btns) { if (b.textContent.trim() === "Download" && !b.textContent.includes("PDFs")) { b.click(); return; } } } });
-      await new Promise(r => setTimeout(r, 2000));
-    }
-
-    // Close the "Download Confirmation" dialog
-    await new Promise(r => setTimeout(r, 2000));
+    // Click Download PDFs — use JS to bypass modal overlay
     await page.evaluate(() => {
-      const modals = document.querySelectorAll('.modal.show, [role=dialog]');
-      for (const m of modals) {
-        const closeBtn = m.querySelector('.close, [aria-label=Close], button:last-child');
-        if (closeBtn && closeBtn.textContent?.trim().length <= 2) { closeBtn.click(); return; }
+      const btns = document.querySelectorAll('button');
+      for (const b of btns) {
+        if (b.textContent.includes('Download PDFs')) { b.click(); break; }
       }
-      // Fallback: click any button with just "×" or "X"
-      const allBtns = document.querySelectorAll('.modal.show button');
-      for (const b of allBtns) { if (b.textContent.trim() === '×' || b.textContent.trim() === 'X') { b.click(); return; } }
     });
+    await new Promise(r => setTimeout(r, 2000));
 
-
+    // Confirm Download in modal — use JS to click through overlay
+    const startTime = Date.now();
+    // Click Download in confirmation modal (use modal-scoped locator)
+    const confirmModal = page.locator('ngb-modal-window.d-block, .modal.show').first();
+    const dlBtn = confirmModal.locator('button:has-text("Download"):not(:has-text("PDFs"))').last();
+    if (await dlBtn.count() > 0) await dlBtn.click({ force: true, timeout: 5000 });
+    await new Promise(r => setTimeout(r, 1000));
 
     // CDP mode: poll for .zip
-    const startTime = Date.now();
     if (dlMode === 'cdp') {
       const cdpDir = getCDPDownloadDir(browserType || 'chrome');
       const dirs = [downloadDir];
@@ -114,15 +79,15 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
         if (zipPath !== dest) fs.copyFileSync(zipPath, dest);
         console.log(JSON.stringify({ status: 'ok', download: { name: filename, path: dest, size: fs.statSync(dest).size, count } }, null, 2));
       } else {
-        console.log(JSON.stringify({ status: 'error', error: 'ZIP not found — download may have failed' }, null, 2));
+        console.log(JSON.stringify({ status: 'error', error: 'ZIP not found' }, null, 2));
       }
-    } else {
-      console.log(JSON.stringify({ status: 'ok', note: 'check download directory for batch ZIP' }, null, 2));
     }
   } catch (e) {
     console.log(JSON.stringify({ status: 'error', error: e.message }, null, 2));
   }
 
+  // Cleanup
+  try { await page.evaluate(() => { document.querySelectorAll('ngb-modal-window .close, .modal .close, [aria-label=Close]').forEach(b => b.click()); }); } catch {}
   if (dlMode === 'cdp') {
     try { browser.close(); } catch {}
     setTimeout(() => process.exit(0), 3000);

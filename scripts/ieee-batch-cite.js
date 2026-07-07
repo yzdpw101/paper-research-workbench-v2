@@ -48,15 +48,17 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
     await new Promise(r => setTimeout(r, 500));
 
     // Click Export
-    await page.locator('li.export-filter').first().click();
+    await page.locator('button.xpl-btn-primary:has-text("Export")').first().click();
     await new Promise(r => setTimeout(r, 2000));
 
-    // Select Citations tab
-    const citationsTab = page.locator('[role=tab]:has-text("Citations"), button:has-text("Citations"), a:has-text("Citations")').first();
-    if (await citationsTab.count() > 0) {
-      await citationsTab.click();
-      await new Promise(r => setTimeout(r, 1000));
-    }
+    // Select Citations tab (use JS, modal might block Playwright click)
+    await page.evaluate(() => {
+      const tabs = document.querySelectorAll('[role=tab], .nav-link');
+      for (const t of tabs) {
+        if (t.textContent.trim() === 'Citations') { t.click(); break; }
+      }
+    });
+    await new Promise(r => setTimeout(r, 1000));
 
     // Select format radio
     const fmtMap = { bibtex: 'BibTeX', plain: 'Plain Text', ris: 'RIS', refworks: 'RefWorks' };
@@ -67,9 +69,9 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
       await new Promise(r => setTimeout(r, 500));
     }
 
-    // Click Download
+    // Click Download — use specific class selector with force click
     const startTime = Date.now();
-    await page.locator('button:has-text("Download")').first().click();
+    await page.locator('button.stats-SearchResults_Citation_Download').first().click({ force: true, timeout: 10000 });
 
     // CDP mode: poll for .txt
     if (dlMode === 'cdp') {
@@ -85,15 +87,14 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
         if (txtPath !== dest) fs.copyFileSync(txtPath, dest);
         console.log(JSON.stringify({ status: 'ok', download: { name: filename, path: dest, size: fs.statSync(dest).size, format } }, null, 2));
       } else {
-        console.log(JSON.stringify({ status: 'error', error: 'citation file not found — download may have failed' }, null, 2));
+        console.log(JSON.stringify({ status: 'error', error: 'citation file not found' }, null, 2));
       }
-    } else {
-      console.log(JSON.stringify({ status: 'ok', note: 'check download directory for citations.txt' }, null, 2));
     }
   } catch (e) {
     console.log(JSON.stringify({ status: 'error', error: e.message }, null, 2));
   }
 
+  try { await page.evaluate(() => { document.querySelectorAll('ngb-modal-window .close, .modal .close, [aria-label=Close]').forEach(b => b.click()); }); } catch {}
   if (dlMode === 'cdp') {
     try { browser.close(); } catch {}
     setTimeout(() => process.exit(0), 3000);
