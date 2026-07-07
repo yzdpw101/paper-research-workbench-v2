@@ -20,7 +20,7 @@ The wizard will:
 7. Network questionnaire: institutional network? → `networkMode='institutional'`; non-institutional → recommends CDP mode
 8. Optional: store IEEE/Wanfang credentials (encrypted via AES-256-GCM)
 9. Optional: enable CDP connection mode (Chrome/Edge only)
-10. Write `.state/config.json` (full template with all fields + comments) + `.state/.browser` + `.state/.setup-done`
+10. Write `.state/.setup-done`
 
 > **Master key**: First run asks you to set a master key (entered twice for confirmation). Stored locally in `.state/master-key`. Subsequent sessions read automatically — no need to re-enter.
 
@@ -174,25 +174,3 @@ Before credential storage, the wizard prints:
 |  Node.js not installed | Missing runtime | Install from https://nodejs.org (v18+ required)  |
 |  Script fails with `ERR_CONNECTION_CLOSED` / `ERR_TIMED_OUT` | Network instability | `navigator.js` auto-retries once after 3s  |
 
-**Core principle**: one failure = diagnose + communicate, never retry endlessly.
-
-## After setup — downloading papers
-
-Setup 完成后，下载论文的流程取决于网络环境：
-
-### 机构网络（校园网/VPN）
-直接下载，无需额外步骤：
-```
-node "${SKILL_DIR}/scripts/wf-download.js" --q "关键词" --type thesis --idx 0 --save-as "./paper.pdf"
-```
-
-### 非机构网络
-需要 CDP Chrome + CARSI 凭据登录：
-1. 启动 CDP Chrome：`scripts/open-chrome-cdp.bat`
-2. 设 master key：`PAPER_MASTER_KEY=<从 .state/master-key 读取>`
-3. 下载（脚本自动完成 CARSI 登录）：
-```
-PAPER_MASTER_KEY=<key> node "${SKILL_DIR}/scripts/wf-download.js" --q "关键词" --type thesis --idx 0 --save-as "./paper.pdf"
-```
-
-> **搜索不需要登录**。`wf-search.js` 无登录逻辑，任何网络环境直接可用。
