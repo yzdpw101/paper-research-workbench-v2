@@ -9,6 +9,10 @@
 
 > 非机构网络下 Firefox 不支持（无法 CDP 共享登录态）。
 
+### CARSI 登录适用范围
+
+SSO 自动填表逻辑（`wf-carsi-login.js` 中的 `ssoLogin()`）基于南京理工大学 SSO 页面编写，选择器为 `#username`、`#password`、`button[name="_eventId_proceed"]`。其他机构的 SSO 登录页可能存在差异——输入框的 `id`/`name` 不同、按钮文本不同、或流程步骤不同。切换机构时可能需要调整这些选择器。
+
 ## 平台能力矩阵
 
 | 功能 | 万方 | IEEE |
@@ -45,6 +49,7 @@
 - AI 全程只接触密文，明文凭据仅在 Playwright 浏览器内存中流转
 
 ## 不支持的功能
+- CARSI 自动登录仅验证南京理工大学，其他机构 SSO 页面可能需调整选择器
 
 - 万方分章下载的一步完成（必须两步：先 analyze 再 download）
 - CDP 模式下自动启动 Chrome（需用户手动）
