@@ -1,0 +1,55 @@
+# Paper Research Workbench — 功能边界
+
+## 网络环境
+
+| 环境 | 浏览器 | 搜索 | 下载 | 登录 |
+|------|--------|------|------|------|
+| 机构网络（校园网/VPN） | Firefox / Chrome | ✅ headless | ✅ 直接下载 | 不需要 |
+| 非机构网络 | Chrome CDP | ✅ CDP | ✅ 需 CARSI | `wf-carsi-login.js` |
+
+> 非机构网络下 Firefox 不支持（无法 CDP 共享登录态）。
+
+## 平台能力矩阵
+
+| 功能 | 万方 | IEEE |
+|------|------|------|
+| 搜索 | ✅ `wf-search.js` | ✅ `ieee-search.js` |
+| 单篇下载 | ✅ `wf-download.js` | ✅ `ieee-download.js` |
+| CARSI 登录 | ✅ 完整自动化 | ⚠️ 首次需手动，之后 SSO 会话复用 |
+| 分章下载 | ✅ 两步（analyze + download） | — |
+| 引用提取 | ✅ `wf-cite.js`（需登录） | — |
+| 批量引用 | ✅ `wf-batch-cite.js` | ✅ `ieee-batch-cite.js`（不需登录） |
+| 批量下载 | ✅ `wf-batch-download.js` | ✅ `ieee-batch-download.js`（需登录，≤10篇） |
+| 图表提取 | — | ✅ `ieee-figures.js` |
+| 论文详情 | — | ✅ `ieee-detail.js` |
+
+## CDP 模式须知
+
+**启动**：bash shell 无法启动 GUI，需用户手动运行 `scripts\open-cdp.bat chrome`。
+
+**下载检测**：CDP 模式 Playwright 无法拦截 Chrome 下载事件，脚本轮询文件系统：
+1. 读取 `.state/profiles/chrome-cdp/Default/Preferences` 获取 Chrome 下载目录
+2. 找不到时扫描所有 profile 目录
+3. 都找不到时 fallback 到 `~/Downloads`
+
+**常见问题**：
+- 删除 `profiles/chrome-cdp` 后重建，Chrome 下载目录重置为系统默认
+- 如果 Windows 下载文件夹被重定向（如 `E:\Downloads`），fallback 可能不对
+- 调试工具：`node scripts/detect-cdp-download.mjs`
+
+**退出**：CDP 模式 `browser.close()` 只是断开连接。脚本打印结果后 3 秒兜底 `process.exit(0)`。
+
+## 凭据安全
+
+- 凭据经 AES-256-GCM 加密存储在 `.state/credentials.json.enc`
+- 主密钥通过 `PAPER_MASTER_KEY` 环境变量提供，不存储在磁盘
+- AI 全程只接触密文，明文凭据仅在 Playwright 浏览器内存中流转
+
+## 不支持的功能
+
+- IEEE 非机构网络 CARSI 登录（仅支持机构 IP）
+- 万方分章下载的一步完成（必须两步：先 analyze 再 download）
+- CDP 模式下自动启动 Chrome（需用户手动）
+- Edge 浏览器（代码支持但未全面测试）
+- IEEE 单篇论文的引用提取（只有批量引用）
+- 万方搜索/下载的并发数 > 1（parallel-* 脚本除外）

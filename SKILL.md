@@ -213,4 +213,5 @@ node ${SKILL_DIR}/scripts/init-wizard.js
 | `ieee/automation.md` | IEEE CARSI 登录、批量引用、批量下载 |
 | `wanfang/chapters.md` | 万方分章下载 |
 | `references/cross-agent.md` | 适配其他 AI Agent 时 |
+| `references/boundaries.md` | 功能边界与限制 |
 | `knowledge/知识库索引.md` | 需要底层知识（CDP、加密、认证等）时 |
