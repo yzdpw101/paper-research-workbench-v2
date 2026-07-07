@@ -22,7 +22,7 @@ The wizard will:
 9. Optional: enable CDP connection mode (Chrome/Edge only)
 10. Write `.state/.setup-done`
 
-> **Master key**: First run asks you to set a master key (entered twice for confirmation). Stored locally in `.state/master-key`. Subsequent sessions read automatically — no need to re-enter.
+> **Master key**: First run asks you to set a master key (entered twice for confirmation). Only provided via PAPER_MASTER_KEY env var. Not stored on disk.
 
 ## Manual setup (if wizard unavailable)
 
@@ -40,23 +40,16 @@ npm install playwright
 
 ### Step 2: Configure default browser
 
-Edit `.state/config.json` (created automatically on first run):
+Set via environment variables (no config file needed):
 
-```json
-{
-  "version": 2,
-  "browser": {
-    "default": "firefox",
-    "mode": "launch",
-    "cdpPort": 9222,
-    "headless": true,
-    "networkMode": "institutional",
-    "allowNonInstitutionalFirefox": false
-  }
-}
+```bash
+# Default browser (firefox / chrome / msedge)
+export PAPER_BROWSER_DEFAULT=firefox      # Linux/Mac
+set PAPER_BROWSER_DEFAULT=firefox          # Windows CMD
+$env:PAPER_BROWSER_DEFAULT="firefox"      # PowerShell
 ```
 
-Or create `.state/.browser` with a single line: `firefox`, `chrome`, or `msedge`.
+Or override per-command with `--browser`: `node scripts/wf-download.js --browser chrome ...`
 
 ### Step 3: Verify environment
 
@@ -74,9 +67,9 @@ Should return `{"success":true,...,"result":"IEEE Xplore"}`.
 If on institutional network (IP auth): no login needed — access is automatic.
 
 If on non-institutional network:
-1. Open Chrome/Edge with CDP: `"${SKILL_DIR}/scripts/open-chrome-cdp.bat" 9222`
+1. Open Chrome/Edge with CDP: `"${SKILL_DIR}/scripts/launch-cdp.js" chrome 9222`
 2. Log into IEEE/Wanfang manually in the opened browser
-3. All subsequent commands use `--connect-existing --cdp-port 9222` to reuse the session
+3. All subsequent commands use `--mode cdp` to reuse the session
 
 ### Step 5: Mark setup complete
 
@@ -92,22 +85,22 @@ CDP (Chrome DevTools Protocol) allows connecting to a user's already-running bro
 
 ```
 # Chrome
-"${SKILL_DIR}/scripts/open-chrome-cdp.bat" 9222
+"${SKILL_DIR}/scripts/launch-cdp.js" chrome 9222
 
 # Edge
-"${SKILL_DIR}/scripts/open-edge-cdp.bat" 9222
+"${SKILL_DIR}/scripts/launch-cdp.js" edge 9222
 
 # Custom user data dir (optional)
-"${SKILL_DIR}/scripts/open-chrome-cdp.bat" 9222 "C:\path\to\custom\profile"
+"${SKILL_DIR}/scripts/launch-cdp.js" chrome 9222 "C:\path\to\custom\profile"
 ```
 
 ### Use CDP in commands
 
-Add `--connect-existing --cdp-port 9222` to any command:
+Add `--mode cdp` to any command:
 
 ```
-node "${SKILL_DIR}/scripts/ieee-search.js" --q "machine learning" --connect-existing --cdp-port 9222
-node "${SKILL_DIR}/scripts/wf-download.js" --q "人工智能" --type thesis --idx 0 --connect-existing
+node "${SKILL_DIR}/scripts/ieee-search.js" --q "machine learning" --mode cdp
+node "${SKILL_DIR}/scripts/wf-download.js" --q "人工智能" --type thesis --idx 0 --mode cdp
 ```
 
 > **Note**: CDP only works with Chrome/Edge. Firefox does not support CDP. On non-institutional networks with Firefox, you'll get a clear error message suggesting to switch browsers.
@@ -119,7 +112,7 @@ node "${SKILL_DIR}/scripts/wf-download.js" --q "人工智能" --type thesis --id
 |  `institutional` | On campus / IP-authenticated | Firefox, Chrome, Edge | IP auto-auth  |
 |  `non-institutional` | Home / VPN / public WiFi | Chrome, Edge | CDP + manual login  |
 
-Change network mode in `.state/config.json` (`browser.networkMode`) or via environment variable:
+Change network mode via environment variable:
 ```
 # Force institutional mode
 PAPER_BROWSER_NETWORK_MODE=institutional node "${SKILL_DIR}/scripts/ieee-search.js" --q "..."
@@ -130,7 +123,7 @@ PAPER_BROWSER_NETWORK_MODE=non-institutional node "${SKILL_DIR}/scripts/wf-searc
 
 ## Switching default browser
 
-Edit `.state/config.json` → `browser.default` → `"chrome"` / `"firefox"` / `"msedge"`
+Set `PAPER_BROWSER_DEFAULT` env var to `chrome`, `firefox`, or `msedge`
 
 Or temporarily override on any command:
 ```
@@ -142,10 +135,10 @@ node "${SKILL_DIR}/scripts/wf-search.js" --browser msedge --q "..."
 
 |  Path | Purpose  |
 | ------|--------- |
-|  `.state/config.json` | Master configuration (full template with comments)  |
+
 |  `.state/.browser` | Default browser (legacy, overwritten by config)  |
 |  `.state/.setup-done` | Setup sentinel  |
-|  `.state/master-key` | Cached master key hash  |
+
 |  `.state/downloads` | Download directory  |
 |  `.state/profiles/<browser>/` | Persistent browser profiles  |
 |  `.state/credentials.json.enc` | Encrypted credentials (AES-256-GCM)  |
@@ -153,7 +146,7 @@ node "${SKILL_DIR}/scripts/wf-search.js" --browser msedge --q "..."
 
 ## Credential security
 
-All credentials are encrypted with **AES-256-GCM** using PBKDF2 (100,000 iterations). Each service has an independent salt. The master key is stored locally in `.state/master-key` and never uploaded to any server.
+All credentials are encrypted with **AES-256-GCM** using PBKDF2 (100,000 iterations). Each service has an independent salt. The master key is only provided via PAPER_MASTER_KEY env var and never stored on disk.
 
 Before credential storage, the wizard prints:
 > "你的凭据将用 AES-256-GCM 加密存储在当前设备。主密码不会上传到任何服务器。"
@@ -167,7 +160,7 @@ Before credential storage, the wizard prints:
 |  Login state lost | Cookie expired | Delete `.state/profiles/<browser>/` and re-login  |
 |  Chrome launch failed | System Chrome not installed | Install Chrome or use `--browser firefox`  |
 |  `Firefox not supported on non-institutional network` | Using Firefox outside campus | Switch to Chrome/Edge + CDP mode  |
-|  CDP connection refused | CDP browser not running | Run `open-chrome-cdp.bat` or `open-edge-cdp.bat` first  |
+|  CDP connection refused | CDP browser not running | Run `launch-cdp.js chrome` or `launch-cdp.js edge` first  |
 |  SSL certificate error (Firefox + CARSI) | Firefox blocks self-signed certs | Switch to Chrome/Edge for CARSI login  |
 |  `network-detector` returns `public` but on campus | Network detection heuristics failed | Set `networkMode: "institutional"` manually  |
 |  Page redirected to `verify?ip=` | Captcha challenge | `network-detector` returns `captcha` type — user must complete manually  |

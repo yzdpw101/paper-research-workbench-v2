@@ -14,10 +14,11 @@
  *   Search page → click .wf-button-quote → 导出题录 modal → extract citation → Escape close
  *
  * Browser: CDP mode only (Vue iView modal component). Chrome on port 9222.
- * Search: works without login (same as wf-search.js).
+ * Search: works without login. Citation extraction REQUIRES CARSI login (wf-carsi-login.js).
  */
 
 import { chromium } from 'playwright';
+import { checkStatus } from './wf-carsi-login.js';
 
 function opt(name, def) {
   const i = process.argv.indexOf(name);
@@ -56,6 +57,15 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
     // Navigate to search, wait for results
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForSelector('div.normal-list', { timeout: 15000 });
+
+    // Citation extraction requires CARSI login
+    const loginStatus = await checkStatus(page);
+    if (!loginStatus.loggedIn) {
+      console.log(JSON.stringify({ error: "not logged in - please run wf-carsi-login.js first" }, null, 2));
+      process.exit(0);
+      return;
+    }
+
 
     // Get result info
     const items = await page.evaluate(() => {

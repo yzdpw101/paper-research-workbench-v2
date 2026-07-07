@@ -24,11 +24,6 @@ import { get as configGet } from './config.js';
 
 // ─── Platform field config ─────────────────────────────────────────────────
 
-/**
- * Field configuration for each supported platform.
- *
- * @type {Object<string, { platformLabel: string, institutionPlaceholder: string, institutionPattern: string|null }>}
- */
 const PLATFORM_FIELDS = Object.freeze({
   ieee: {
     platformLabel: 'IEEE',
@@ -44,11 +39,6 @@ const PLATFORM_FIELDS = Object.freeze({
 
 // ─── HTML template ─────────────────────────────────────────────────────────
 
-/**
- * Build the full HTML form document.
- *
- * @returns {string} HTML content
- */
 function buildFormHtml() {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -159,7 +149,6 @@ function buildFormHtml() {
     var saveBtn = document.getElementById('saveBtn');
     var resultEl = document.getElementById('result');
 
-    // Validate
     if (!username || !password) {
       errorEl.textContent = '账号和密码不能为空';
       errorEl.style.display = 'block';
@@ -167,7 +156,6 @@ function buildFormHtml() {
     }
     errorEl.style.display = 'none';
 
-    // Disable button to prevent double-submit
     saveBtn.disabled = true;
     saveBtn.textContent = '保存中...';
 
@@ -208,13 +196,6 @@ function buildFormHtml() {
 
 // ─── Public API ────────────────────────────────────────────────────────────
 
-/**
- * Get form field configuration for a platform.
- *
- * @param {string} platform — 'ieee' or 'wanfang'
- * @returns {{ platformLabel: string, institutionPlaceholder: string, institutionPattern: string|null }}
- * @throws {Error} If platform is unknown
- */
 export function getFormFields(platform) {
   const fields = PLATFORM_FIELDS[platform];
   if (!fields) {
@@ -223,12 +204,6 @@ export function getFormFields(platform) {
   return { ...fields };
 }
 
-/**
- * Generate the credential input HTML form and write it to the given path.
- *
- * @param {string} filePath — Absolute path to write the HTML file
- * @returns {Promise<string>} The file path written
- */
 export async function generateFormHtml(filePath) {
   const html = buildFormHtml();
   const dir = path.dirname(filePath);
@@ -239,24 +214,7 @@ export async function generateFormHtml(filePath) {
   return filePath;
 }
 
-/**
- * Run the credential input page flow.
- *
- * Steps:
- *   1. Configure credential vault (master key + path)
- *   2. Generate HTML form to a temporary directory
- *   3. Launch browser (headless: false) and navigate to the form
- *   4. Expose __saveCredentials + __exitForm functions
- *   5. Wait for user to close the browser (Exit button or window close)
- *   6. Print summary of all saved platforms
- *   7. Clean up: close browser, remove temp file
- *
- * @param {object} [options]
- * @param {string} [options.tmpDir] — Override temp directory (for testing)
- * @returns {Promise<{ success: boolean, platforms?: string[], error?: string }>}
- */
 export async function run(options = {}) {
-  // Resolve directories
   const stateDir = path.resolve(PROJECT_ROOT, '.state');
   const tmpDir = options.tmpDir || fs.mkdtempSync(path.join(os.tmpdir(), 'cred-page-'));
 
@@ -264,20 +222,10 @@ export async function run(options = {}) {
   let launchResult;
 
   try {
-    // ─── Step 1: Configure credential vault ──────────────────────────────
-
-    // ─── Resolve master key: env → .state/master-key → readline → error ──
+    // Resolve master key: env → readline → error
     let masterKey = process.env.PAPER_MASTER_KEY;
 
     if (!masterKey) {
-      const masterKeyPath = path.join(stateDir, 'master-key');
-      if (fs.existsSync(masterKeyPath)) {
-        masterKey = fs.readFileSync(masterKeyPath, 'utf-8').trim();
-      }
-    }
-
-    if (!masterKey) {
-      // Only prompt interactively when stdin is a TTY
       try {
         if (!process.stdin.isTTY) throw new Error('Not a TTY');
         const { createInterface } = await import('node:readline');
@@ -288,7 +236,7 @@ export async function run(options = {}) {
             rl.close();
           });
         });
-      } catch { /* not interactive — fall through to error */ }
+      } catch { /* not interactive */ }
     }
 
     if (!masterKey) {
@@ -308,16 +256,12 @@ export async function run(options = {}) {
     const vaultFilePath = path.join(stateDir, 'credentials.json.enc');
     setVaultPath(vaultFilePath);
 
-    // ─── Step 2: Generate HTML form ──────────────────────────────────────
-
+    // Generate HTML form
     htmlFilePath = path.join(tmpDir, 'credential-form.html');
     await generateFormHtml(htmlFilePath);
-
-    // Convert to file:// URL for browser navigation
     const fileUrl = 'file://' + htmlFilePath.replace(/\\/g, '/');
 
-    // ─── Step 3: Launch browser ──────────────────────────────────────────
-
+    // Launch browser
     const { launch } = await import('./browser-launcher.js');
     launchResult = await launch({
       browser: configGet('browser.default') || process.env.PAPER_BROWSER || 'firefox',
@@ -327,8 +271,7 @@ export async function run(options = {}) {
 
     const { browser, context, page } = launchResult;
 
-    // ─── Step 4: Expose credential functions ────────────────────────────
-
+    // Expose credential functions with real-time feedback
     const savedPlatforms = [];
 
     await page.exposeFunction('__saveCredentials', async (data) => {
@@ -341,45 +284,46 @@ export async function run(options = {}) {
         updatedAt: new Date().toISOString(),
       });
       savedPlatforms.push(platform);
+      const label = platform === 'ieee' ? 'IEEE' : '万方';
+      console.log(`  ✓ ${label} 凭据已保存 (${institution || '未填写机构'})`);
     });
 
     await page.exposeFunction('__exitForm', async () => {
+      console.log('  → 用户点击了退出，正在关闭表单...');
       try { await page.close(); } catch { /* ignore */ }
     });
 
-    // ─── Step 5: Navigate to form ────────────────────────────────────────
-
+    // Navigate to form
     await page.goto(fileUrl, { waitUntil: 'networkidle', timeout: 15000 });
 
     console.log('\n  ═══════════════════════════════════════════════════');
-    console.log('  请在浏览器窗口中填写凭据，保存后自动关闭');
+    console.log('  凭据输入表单已在浏览器中打开');
+    console.log('  ───────────────────────────────────────────────');
+    console.log('  ① 选择平台（IEEE / 万方）');
+    console.log('  ② 填写机构名称和账号密码');
+    console.log('  ③ 点击「保存」→ 终端会打印确认信息');
+    console.log('  ④ 可切换平台继续添加，完成后点击「退出」');
     console.log('  ═══════════════════════════════════════════════════\n');
 
-    // ─── Step 6: Wait for user to close the browser ──────────────────────
-
+    // Wait for user to close the form
     await new Promise((resolve) => {
       page.on('close', () => resolve());
     });
 
-    // ─── Step 7: Print summary ───────────────────────────────────────────
-
+    // Print summary
     for (const p of savedPlatforms) {
       const label = p === 'ieee' ? 'IEEE' : '万方';
       console.log(`  ✓ ${label} credentials saved.`);
     }
 
-    // ─── Step 8: Clean up ────────────────────────────────────────────────
-
-    // Close context and browser
+    // Cleanup
     try { await context.close(); } catch { /* ignore */ }
     try { await browser.close(); } catch { /* ignore */ }
 
-    // Remove temp HTML file
     if (htmlFilePath && fs.existsSync(htmlFilePath)) {
       fs.rmSync(htmlFilePath, { force: true });
     }
 
-    // Remove tmpDir if we created it and it's empty
     if (!options.tmpDir && fs.existsSync(tmpDir)) {
       try {
         const remaining = fs.readdirSync(tmpDir);
@@ -389,28 +333,22 @@ export async function run(options = {}) {
       } catch { /* ignore */ }
     }
 
-    // ─── Step 9: Return result ───────────────────────────────────────────
-
     return {
       success: savedPlatforms.length > 0,
       platforms: savedPlatforms,
     };
   } catch (err) {
-    // Clean up on error
     if (htmlFilePath && fs.existsSync(htmlFilePath)) {
       try { fs.rmSync(htmlFilePath, { force: true }); } catch { /* ignore */ }
     }
     if (!options.tmpDir && tmpDir && fs.existsSync(tmpDir)) {
       try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
     }
-
-    // Close browser on error
     if (launchResult) {
       try { await launchResult.page.close(); } catch { /* ignore */ }
       try { await launchResult.context.close(); } catch { /* ignore */ }
       try { await launchResult.browser.close(); } catch { /* ignore */ }
     }
-
     return { success: false, error: err.message };
   }
 }

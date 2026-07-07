@@ -13,11 +13,12 @@
  *   Search page → select checkboxes (force click) → click 批量引用
  *   → new tab /export → extract GB/T 7714 citations → close tab
  *
- * Browser: CDP mode only. Search works without login.
+ * Browser: CDP mode only. Citation extraction REQUIRES CARSI login (wf-carsi-login.js).
  * Limit: max 10 items. Thesis type not supported (no batch ops).
  */
 
 import { chromium } from 'playwright';
+import { checkStatus } from './wf-carsi-login.js';
 
 function opt(name, def) {
   const i = process.argv.indexOf(name);
@@ -49,6 +50,15 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
     // ── Navigate search page ──
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForSelector('div.normal-list', { timeout: 15000 });
+
+    // Batch citation extraction requires CARSI login
+    const loginStatus = await checkStatus(page);
+    if (!loginStatus.loggedIn) {
+      console.log(JSON.stringify({ error: "not logged in - please run wf-carsi-login.js first" }, null, 2));
+      process.exit(0);
+      return;
+    }
+
 
     const totalItems = await page.locator('div.normal-list input.ivu-checkbox-input').count();
     const selectCount = Math.min(count, totalItems);

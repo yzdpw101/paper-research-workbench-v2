@@ -1,98 +1,61 @@
-# 万方分章节下载 (Reasonix v2)
+# 万方分章节下载
 
-仅限硕博论文。使用专用 `wf-chapter.js` 一步完成。
+仅限硕博论文。两步完成：先分析章节树，再按 ID 下载。
 
-## 用法
-
-```bash
-node "${SKILL_DIR}/scripts/wf-chapter.js" \
-  --q "<关键词>" \
-  --idx <N> \
-  --save-as "<输出路径>.zip"
-```
-
-默认勾选前 2 节（`auto:2`），自动展开含子节的章。
-
-### 参数
-
-|  参数 | 默认 | 说明  |
-| ------|------|------ |
-|  `--q` | **必填** | 搜索关键词  |
-|  `--idx` | `0` | 第几篇（0-based）  |
-|  `--page` | `1` | 搜索页码  |
-|  `--expand` | auto | 要展开的章标题（逗号分隔），如 `第一章,第二章`  |
-|  `--check` | `auto:2` | 要勾选的节标题（逗号分隔），或 `auto:N` 自动选前 N 节  |
-|  `--save-as` | 自动命名 | 输出路径（`.zip`）  |
-|  `--timeout` | `120000` | 超时毫秒数  |
-|  `--no-close` | off | 浏览器保持打开（调试或手动登录用）  |
-
-### 全局参数
-
-|  参数 | 说明  |
-| ------|------ |
-|  `--browser <firefox\|chrome\|msedge>` | 临时切换浏览器  |
-|  `--no-kill` | 不杀残留进程  |
-|  `--connect-existing` | CDP 连接已有浏览器  |
-|  `--cdp-port <n>` | CDP 端口 (默认 9222)  |
-|  `--debug` | 调试模式  |
-
-## 示例
+## Step 1: 分析
 
 ```bash
-# 自动模式：下载第 1 篇，自动选前 2 节
 node "${SKILL_DIR}/scripts/wf-chapter.js" \
-  --q "稀布阵列" --idx 0 --save-as "~/Desktop/稀布阵列_分章.zip"
-
-# 手动指定章节
-node "${SKILL_DIR}/scripts/wf-chapter.js" \
-  --q "稀布阵列" --idx 0 \
-  --expand "第二章,第三章" \
-  --check "2.1理论基础,2.2建模方法,3.1优化算法" \
-  --save-as "~/Desktop/chapters.zip"
+  --action analyze \
+  --q "<关键词>" --idx 0 [--mode launch|cdp]
 ```
 
-## wf-chapter.js 内部流程
+展开全部章节树，输出 JSON。例如 `--mode cdp`（非机构网络，需先启动 CDP Chrome + CARSI 登录）。
 
-1. `browser-launcher.js` → 启动浏览器
-2. `navigator.js` → 搜索关键字 → 获取结果列表
-3. 点击第 `--idx` 项的「分章下载」
-4. 跳转到 `d.wanfangdata.com.cn/part/thesis/` 分章页
-5. 展开书签树（`--expand` 指定的章，或自动检测含子节的章）
-6. 勾选目标节（`--check` 指定的节，或 `auto:N` 自动选前 N 个叶子节点）
-7. 确认下载 → 等待下载完成 → 保存为 ZIP
-
-## 返回值
-
+输出示例：
 ```json
-// 成功
-{"status":"ok","download":{"name":"...zip","path":"~/Desktop/...","size":8117471}}
-
-// 失败（无分章按钮）
-{"status":"error","error":"no chapter download for index 0","available":["篇名1","篇名2"]}
-
-// 失败（PDF 无分层书签）
-{"status":"error","error":"no chapter bookmarks in PDF","details":{"tier":"none"}}
-
-// 失败（未登录 — 加 --no-close 后手动登录）
-{"status":"error","error":"not logged in — use --no-close and log in manually"}
+{
+  "action": "analyze",
+  "totalNodes": 43,
+  "nodes": [
+    {"id": 5, "title": "第一章 绪论10-10页"},
+    {"id": 6, "title": "1.1 研究工作的背景与意义10-11页"},
+    {"id": 7, "title": "1.2 国内外研究历史与现状11-16页"},
+    ...
+  ]
+}
 ```
 
-## 书签层级诊断（tier）
+## Step 2: 下载
 
-|  tier | 含义 | 策略  |
-| ------|------|------ |
-|  `hierarchical` | 章→节→子节，层次分明 | 自动展开+勾选指定节  |
-|  `flat` | 扁平无层次 | 自动勾选前 N 个叶子节点  |
-|  `none` | 完全没有书签 | 报错，建议改用整篇下载  |
+```bash
+node "${SKILL_DIR}/scripts/wf-chapter.js" \
+  --action download \
+  --q "<关键词>" --idx 0 \
+  --ids "6,7,11,12" \
+  --save-as "<输出路径>.zip" [--mode cdp]
+```
 
-## 注意事项
+`--ids` 为 Step 1 输出中要下载的节点 ID（逗号分隔）。勾选后点击"确认下载"，等待 ZIP 完成并复制到 `--save-as`。
 
-- **首次使用**：加 `--no-close`，浏览器打开后手动登录万方，关闭浏览器后登录态自动保存（storageState）。后续无需 `--no-close`
-- `hasChapter=true` ≠ PDF 有分层书签。脚本自动诊断 tier
-- tier=flat：自动勾选前 N 个叶子节点
-- tier=none：建议改用 `wf-download.js` 整篇下载
-- 分章页 URL 含 `d.wanfangdata.com.cn/part/thesis/`
-- 确认下载后自动忽略 `f.wanfangdata.com.cn` 新标签（倒计时页）
-- **非机构网络**：Firefox 不支持万方 CARSI。使用 `--browser chrome` 或 `--connect-existing` CDP 模式
-- 如果页面出现验证码，脚本会在 `--timeout` 后超时返回 error
-- 登录过期表现：下载按钮从 整篇下载/分章下载 降级为 bare 下载 → 停止并提示用户
+## 参数
+
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `--action` | `analyze` | `analyze` 展开全树输出 JSON；`download` 按 ID 下载 |
+| `--q` | **必填** | 搜索关键词 |
+| `--idx` | `0` | 第几篇（0-based） |
+| `--ids` | — | 要下载的节点 ID，逗号分隔（仅 download） |
+| `--save-as` | 自动命名 | 输出路径 `.zip`（仅 download） |
+| `--timeout` | `120000` | 超时毫秒数 |
+| `--mode` | `launch` | `launch` 或 `cdp` |
+| `--browser` | `chrome`(cdp) | 浏览器类型 |
+| `--cdp-port` | `9222` | CDP 端口 |
+
+## 内部流程
+
+1. 搜索关键词 → 获取结果列表
+2. 点击第 `--idx` 项的「分章下载」
+3. 等待分章页打开（`part/thesis` 或 `chapter` URL）
+4. **analyze**: 递归展开所有 `.ivu-tree-arrow` → 输出完整节点列表
+5. **download**: 展开全树 → 按 `--ids` 勾选 checkbox → 点击「确认下载」→ CDP 模式轮询文件系统 → 复制 ZIP 到目标路径

@@ -9,7 +9,7 @@
 |  所有 `scripts/*.js` | 纯命令行调用，与 Agent 无关  |
 |  所有 `scripts/*.bat` | Windows 批处理，与 Agent 无关  |
 |  `storageState` / `profiles/` | 文件持久化，跨 Agent 共享  |
-|  `.state/.browser` / `.state/config.json` | 文件持久化  |
+|  `.state/.setup-done` | 文件持久化  |
 |  浏览器引擎 | Playwright 控制，不依赖 Agent  |
 
 ## 需要适配的部分
@@ -38,11 +38,11 @@
 |  事项 | 说明  |
 | ------|------ |
 |  26 个脚本 | v1 只有 15 个，v2 新增 Core/Browser Layer 模块  |
-|  `config.js` | 首次运行自动生成 `.state/config.json`  |
+|  `config.js` | 纯代码，无配置文件，默认值 + PAPER_* 环境变量 |
 |  `init-wizard.js` | 替代 v1 的 `init.js` + `set-browser.js`  |
 |  Headless 默认 true | 如需可视化，设 `PAPER_BROWSER_HEADLESS=false`  |
 |  Firefox 限制 | 仅支持机构网络；非机构网络需 Chrome/Edge + CDP  |
-|  CDP 模式 | Chrome/Edge 需手动启动带 `--remote-debugging-port`，然后 `--connect-existing`  |
+|  CDP 模式 | Chrome/Edge 需手动启动带 `--remote-debugging-port`，然后 `--mode cdp`  |
 |  凭据加密 | AES-256-GCM，主密钥优先用 Windows DPAPI  |
 
 ## 浏览器支持

@@ -10,7 +10,7 @@
  *   Step 6: Verify browser can start
  *   Step 7: (Optional) Store IEEE/万方 credentials
  *   Step 8: (Optional) Enable CDP connection mode
- *   Step 9: Write .state/config.json + markers
+ *   Step 9: Write .state/.setup-done marker
  *   Step 10: Bare-metal guidance (zero browsers)
  *
  * Module interface:
@@ -18,7 +18,7 @@
  *   detectSystemBrowsers()     — Detect OS-installed browsers
  *   detectPlaywrightBrowsers() — Detect Playwright-installed browsers
  *   verifyBrowserStart(name)   — Test-launch a browser
- *   writeConfig(config, dir)   — Write config files + markers
+
  *   run({ rl, stateDir })      — Run the full wizard
  *
  * Dependencies: config (read), browser-launcher, credential-vault, readline
@@ -223,58 +223,6 @@ export async function verifyBrowserStart(browserName, stateDir, inject) {
     return true;
   } catch {
     return false;
-  }
-}
-
-// ─── Step 9: Write config files ──────────────────────────────────────────
-
-/**
- * Write wizard results to config files.
- * Creates .state/config.json, .state/.setup-done, and .state/.browser.
- *
- * @param {object} config - Configuration object to write
- * @param {string} stateDir - Path to .state directory
- */
-export async function writeConfig(config, stateDir) {
-  // Ensure state directory exists
-  fs.mkdirSync(stateDir, { recursive: true });
-
-  // Write config.json (merge with existing if present)
-  const configPath = path.join(stateDir, 'config.json');
-  let existing = {};
-  try {
-    if (fs.existsSync(configPath)) {
-      const raw = fs.readFileSync(configPath, 'utf-8');
-      existing = JSON.parse(raw);
-    }
-  } catch {
-    // Corrupted or empty — start fresh
-  }
-
-  const merged = { ...existing, ...config };
-  // Deep merge browser sub-object
-  if (config.browser && existing.browser) {
-    merged.browser = { ...existing.browser, ...config.browser };
-  }
-  if (config.credentials && existing.credentials) {
-    merged.credentials = { ...existing.credentials, ...config.credentials };
-  }
-
-  fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), 'utf-8');
-
-  // Write .setup-done marker
-  const markerPath = path.join(stateDir, '.setup-done');
-  const marker = JSON.stringify({
-    setupComplete: true,
-    completedAt: new Date().toISOString(),
-    version: 2,
-  }, null, 2);
-  fs.writeFileSync(markerPath, marker, 'utf-8');
-
-  // Write .browser marker (legacy compatibility)
-  if (config.browser && config.browser.default) {
-    const browserPath = path.join(stateDir, '.browser');
-    fs.writeFileSync(browserPath, config.browser.default, 'utf-8');
   }
 }
 
@@ -845,48 +793,34 @@ export async function run(options = {}) {
     // ── Prepare/confirm master key ────────────────────────────────────────
     let masterKey = process.env.PAPER_MASTER_KEY;
 
-    // Try to read existing master-key file
-    if (!masterKey) {
-      const mkPath = path.join(stateDir, 'master-key');
-      if (fs.existsSync(mkPath)) {
-        masterKey = fs.readFileSync(mkPath, 'utf-8').trim();
-      }
-    }
-
-    // If still no key, ask user to set one with confirmation
+    // If no key in environment, prompt user to set one
     if (!masterKey) {
       console.log('\n  ── Master Password Setup ──');
       console.log('  Please set a master password for encrypting stored credentials.');
-      console.log('  This password will be stored locally in your .state/ directory.');
-      console.log('  ⚠  Do not lose this password — it cannot be recovered!');
+      console.log('  This password is NOT stored on disk — set it via PAPER_MASTER_KEY env var.');
+      console.log('  ⚠  Do not lose this password — encrypted credentials cannot be recovered without it!');
+      console.log('  (Or press Enter to skip credential setup for now.)');
 
       const mk1 = await promptInput(rl, '  Enter master password', '');
       if (!mk1) {
-        // User provided empty — auto-generate
-        masterKey = `mk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        console.log(`  Auto-generated master key: ${masterKey}`);
-        console.log('  (Save this key if you need to access credentials from another tool.)');
+        console.log('  Credential setup skipped. Set PAPER_MASTER_KEY later to configure credentials.');
+        masterKey = '';
       } else {
         const mk2 = await promptInput(rl, '  Confirm master password', '');
         if (mk1 !== mk2) {
-          console.log('  ⚠  Passwords do not match. Auto-generating a master key instead.');
-          masterKey = `mk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-          console.log(`  Auto-generated master key: ${masterKey}`);
+          console.log('  ⚠  Passwords do not match. Credential setup skipped.');
+          masterKey = '';
         } else {
           masterKey = mk1;
           console.log('  ✓ Master password confirmed.');
+          console.log('  To persist: export PAPER_MASTER_KEY="<your-password>" (add to ~/.bashrc or ~/.zshrc)');
         }
       }
-
-      // Save to .state/master-key for future sessions
-      const mkPath = path.join(stateDir, 'master-key');
-      fs.writeFileSync(mkPath, masterKey, 'utf-8');
-      console.log(`  Master key saved to ${path.relative(PROJECT_ROOT, mkPath)}`);
     } else {
-      console.log(`  Using master key from ${process.env.PAPER_MASTER_KEY ? 'environment' : '.state/master-key'}`);
+      console.log('  Using master key from PAPER_MASTER_KEY environment variable.');
     }
 
-    process.env.PAPER_MASTER_KEY = masterKey;
+    if (masterKey) process.env.PAPER_MASTER_KEY = masterKey;
 
     // ── Step 6: Network environment questionnaire ─────────────────────────
     console.log('\n  [6/10] Network environment...');
@@ -985,7 +919,14 @@ export async function run(options = {}) {
       },
     };
 
-    await writeConfig(config, stateDir);
+    // Write .setup-done marker
+    const markerPath = path.join(stateDir, '.setup-done');
+    const marker = JSON.stringify({
+      setupComplete: true,
+      completedAt: new Date().toISOString(),
+      version: 2,
+    }, null, 2);
+    fs.writeFileSync(markerPath, marker, 'utf-8');
 
     console.log('\n  ✓ Setup complete! Configuration saved.\n');
     return { success: true, config };

@@ -1,168 +1,212 @@
 ---
 name: paper-research-workbench-v2
-description: 学术论文检索与下载工具 — 支持 IEEE Xplore 和万方数据平台，基于 Playwright 浏览器自动化，支持机构网络(IP认证)/CDP Chrome CARSI 登录/并行搜索下载。
+description: >
+  学术论文检索与下载工具，支持 IEEE Xplore 和万方数据平台。
+  当用户需要搜索中英文学术论文、下载论文 PDF、提取参考文献引用、
+  获取论文图表或批量处理文献时使用此 skill。
+  基于 Playwright 浏览器自动化，支持机构网络 IP 认证与 CARSI SSO 登录。
 ---
 
 # Paper Research Workbench
 
-## ⚠️ Route first — 执行前必读
+学术论文检索与下载的完整工作台，覆盖 **IEEE Xplore**（英文）和 **万方数据**（中文）两个主流平台。
 
-**CDP 铁律**：CDP 模式需要先启动带 `--remote-debugging-port=9222` 的 Chrome（运行 `scripts/open-chrome-cdp.bat`），下载脚本加 `--mode cdp` 连接。
+## 为什么搜索和下载要分开
 
-> 搜索脚本永远 launch 模式（headless），不连 CDP。下载脚本通过 `--mode launch|cdp` 切换。
+搜索和下载对网络和认证的需求完全不同：
 
-**搜索 ≠ 下载**：搜索只查不下载，下载只下不查，命令分开。说"检索/搜/找"→搜索；说"下/保存"→下载。
+- **搜索**在任何网络下都能工作，不需要登录。使用 headless Firefox，快速返回文献元数据。
+- **下载**需要认证——机构网络通过 IP 自动识别，非机构网络需要 CARSI SSO 登录（仅万方支持）。
 
-**只有下载需要登录，搜索不需要**。万方和 IEEE 都是：搜索脚本无登录逻辑，下载前需单独处理登录。
-- 万方登录 → `wf-carsi-login.js`（CDP 模式，需 PAPER_MASTER_KEY）
-- 万方下载 → `wf-download.js --mode launch|cdp`
-- IEEE 下载 → `ieee-download.js`（仅机构网络 IP 认证）
+把两者分开意味着先搜后下，搜到确认要的论文再触发认证流程。这样避免了不必要的登录开销，也符合学术工作流的直觉：浏览 → 筛选 → 获取全文。
 
-**下载前必须确认**：用户说"下载"时，先问：
-> 你当前是什么网络环境？① 机构网络（校园网/机构 VPN，IP 直接认证）② 非机构网络（已存凭据 + CDP Chrome）③ 不确定
+## 快速开始
 
-- ① → 直接跑下载脚本 `--mode launch`
-- ② → 1) 启动 CDP Chrome  2) 跑 `wf-carsi-login.js` 登录  3) 跑下载脚本 `--mode cdp`
-- ③ → 先跑搜索看能否正常返回结果，能就按②流程
+### 搜索（任何网络，无需登录）
 
-> **凭据**：存在 `.state/credentials.json.enc`（AES-256-GCM 加密），需 `PAPER_MASTER_KEY` 环境变量解密。key 存储在 `.state/master-key`。
+```bash
+# 万方 — 中文论文
+node ${SKILL_DIR}/scripts/wf-search.js --q "深度学习" --type thesis --page 1 --rows 20
 
-**Headless 默认**：默认 headless。若被网站屏蔽（万方 `fault filter abort`、IEEE `Error 418`），换 CDP 模式或 Firefox。
+# IEEE — 英文论文
+node ${SKILL_DIR}/scripts/ieee-search.js --q "deep learning" --type Journals --year 2023-2025 --rows 25
+```
 
-**首次设置**：`.state/.setup-done` 不存在 → 读 `shared/setup.md` 执行首次设置。
+搜索返回标题、作者、摘要等信息。翻页用 `--page`。万方 `--no-snippet` 可省略摘要以节省 token。
 
-## 意图 → 命令
+### 下载 — 机构网络（校园网 / 机构 VPN）
 
-|  意图 | 命令 | 注意  |
-| ---|---|--- |
-|  ⚠️ 首次设置 | 读 `shared/setup.md` | `.state/.setup-done` 不存在时必须先做  |
-|  万方搜索 | `node ${SKILL_DIR}/scripts/wf-search.js --q "..." --type thesis --page 1 --rows 20` | 翻页用 `--page`，`--no-snippet` 省 token  |
-|  万方下载 | `node ${SKILL_DIR}/scripts/wf-download.js --q "..." --type thesis --idx 0 --save-as "..."` | 机构直接下；非机构需 CARSI 登录后 `--mode cdp`  |
-|  万方引用 | `node ${SKILL_DIR}/scripts/wf-cite.js --q "..." --type thesis --idx 0` | CDP 模式，`--format gb7714|mla|apa` |
-|  万方批量引用 | `node ${SKILL_DIR}/scripts/wf-batch-cite.js --q "..." --type periodical --count 3` | CDP 模式，最多10篇 |
-|  万方批量下载 | `node ${SKILL_DIR}/scripts/wf-batch-download.js --q "..." --type periodical --count 3 --save-dir "..."` | CDP 模式，期刊全文 |
-|  万方分章下载 | `node ${SKILL_DIR}/scripts/wf-chapter.js --q "..." --idx 0 --save-as "..."` | 先看 `wanfang/chapters.md`  |
-|  万方并行搜索 | `node ${SKILL_DIR}/scripts/parallel-search.js --q "kw1,kw2" --platform wanfang` | 多关键词并发  |
-|  IEEE 搜索 | `node ${SKILL_DIR}/scripts/ieee-search.js --q "..." --type Journals --year 2023-2025 --rows 25 --page 1` | `--expand` 展开摘要  |
-|  IEEE 详情 | `node ${SKILL_DIR}/scripts/ieee-detail.js --arnumber <n>` | 作者、DOI、引用等  |
-|  IEEE 下载 | `node ${SKILL_DIR}/scripts/ieee-download.js --arnumber <n> --save-as "..."` | 用 arnumber，不是关键词  |
-|  IEEE 图表 | `node ${SKILL_DIR}/scripts/ieee-figures.js --arnumber <n> --out-dir "..."` | 先读 `ieee/figures.md`  |
-|  IEEE 并行搜索 | `node ${SKILL_DIR}/scripts/parallel-search.js --q "kw1,kw2" --platform ieee` |  |
-|  IEEE 并行下载 | `node ${SKILL_DIR}/scripts/parallel-download.js --arnumbers "n1,n2" --save-dir "..."` |  |
-|  万方 CARSI 登录 | `node ${SKILL_DIR}/scripts/wf-carsi-login.js` | **仅 CDP 模式**，需先启动 CDP 浏览器  |
-|  自定义 eval | `node ${SKILL_DIR}/scripts/eval.js --url "..." --code "..."` |  |
-|  自定义 run | `node ${SKILL_DIR}/scripts/run.js --code-file /tmp/code.js` | 通用 Playwright runner  |
+IP 自动认证，直接下载：
 
-> **IEEE 渐进式**：标题→摘要→详情→下载，每步按需。**万方一步到位**：搜索页已有完整摘要和下载入口。说"检索"不跳到下载。
+```bash
+# 万方
+node ${SKILL_DIR}/scripts/wf-download.js --q "关键词" --type thesis --idx 0 --save-as "paper.pdf"
 
-## Scripts
+# IEEE（用 arnumber，不是关键词）
+node ${SKILL_DIR}/scripts/ieee-download.js --arnumber 1234567 --save-as "paper.pdf"
+```
 
-所有脚本在 `${SKILL_DIR}/scripts/` 下。运行方式：`node "${SKILL_DIR}/scripts/<name>.js" [options]`。
+### 下载 — 非机构网络（需要 CARSI 登录）
 
-### CLI 入口
+仅万方支持 CARSI SSO（IEEE 当前只支持机构 IP）。三步流程：
 
-|  脚本 | 用途  |
-| ---|--- |
-|  `wf-search.js` | 万方搜索 — `--q` `--type` `--page` `--rows`(max20) `--no-snippet`  |
-|  `wf-download.js` | 万方下载 — `--q` + `--type` + `--idx`（0-based），论文流（整篇下载→新标签→倒计时→点击此处）和期刊流（直接触发）  |
-|  `wf-batch-cite.js` | 万方批量引用 — `--q` `--type` `--count`，CDP 模式 |
-|  `wf-batch-download.js` | 万方批量下载 — `--q` `--type` `--count` `--save-dir`，CDP 模式，期刊全文 |
-|  `wf-cite.js` | 万方引用提取 — `--q` `--type` `--idx` `--format`(gb7714|mla|apa)，CDP 模式 |
-|  `wf-chapter.js` | 万方论文分章下载 — 书签树展开、选章、ZIP  |
-|  `wf-carsi-login.js` | 万方 CARSI SSO 登录 — 导出 `checkStatus(page)` 和 `login(page, creds, opts)`，CLI：`node wf-carsi-login.js --port=9222`  |
-|  `ieee-search.js` | IEEE 搜索 — `--q` `--type` `--year` `--rows`(max25) `--page` `--expand`  |
-|  `ieee-detail.js` | IEEE 元数据 — 作者、DOI、摘要、关键词、引用  |
-|  `ieee-download.js` | IEEE PDF 下载 — `--arnumber`，通过 stampPDF + CDP 轮询  |
-|  `ieee-figures.js` | IEEE 图表提取 — 详情页→Figures 标签→并行下载  |
-|  `eval.js` | 通用 evaluate — 导航 URL + 执行 JS → JSON  |
-|  `run.js` | 通用 Playwright runner — 执行 JS，可选下载捕获  |
-|  `parallel-search.js` | 多关键词并行搜索 — `--q "kw1,kw2" --platform ieee|wanfang`  |
-|  `parallel-download.js` | 批量 IEEE 下载 — `--arnumbers "n1,n2" --save-dir "..."`  |
+```bash
+# 1. 启动 CDP Chrome（带远程调试端口）
+node ${SKILL_DIR}/scripts/launch-cdp.js chrome
 
-### 核心模块（import 使用，非 CLI）
+# 2. CARSI 登录
+PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-carsi-login.js --port=9222
 
-|  模块 | 用途 | 关键导出  |
-| ---|---|--- |
-|  `config.js` | 配置中心 — 默认值 + PAPER_* 环境变量 | `get(key)`, `getAll()`  |
-|  `browser-launcher.js` | 浏览器生命周期 — launch/CDP/storageState | `launch()`, `connectExisting()`  |
-|  `navigator.js` | 智能导航 — 指数退避重试、就绪检测 | `goto()`, `retry()`  |
-|  `credential-vault.js` | AES-256-GCM 加密凭据 | `store()`, `retrieve()`  |
-|  `session-manager.js` | 登录会话 24h TTL | `saveSession()`, `isSessionValid()`  |
-|  `network-detector.js` | 网络环境检测 | `isInstitutionalAccess()`, `canDownload()`  |
-|  `context-pool.js` | 浏览器上下文池 | `createPool()`  |
-|  `cdp-connector.js` | CDP 连接管理 | `connect()`, `isCDPAvailable()`  |
-|  `batch-runner.js` | 批量任务调度 | `runBatch()`  |
-|  `init-wizard.js` | **模块**，非 CLI — 需 `import { run }` 后调用 `run()` | `run()`, `checkEnvironment()`  |
+# 3. 下载（--mode cdp 连接到已登录的 Chrome）
+PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "关键词" --type thesis --idx 0 --save-as "paper.pdf"
+```
 
-### 辅助文件
+> **下载前确认网络环境**：先问用户「你当前是什么网络？① 机构网络 ② 非机构网络 ③ 不确定」。流程详见 `references/download-flow.md`。
 
-|  文件 | 用途  |
-| ---|--- |
-|  `open-chrome-cdp.bat` | 启动 Chrome + `--remote-debugging-port=9222`  |
-|  `open-edge-cdp.bat` | 启动 Edge + `--remote-debugging-port=9222`  |
-|  `credential-page.js` | 浏览器内凭据输入表单  |
+## 命令速查
+
+所有脚本位于 `${SKILL_DIR}/scripts/`，通过 `node` 直接运行。
+
+### Core — 搜索与下载
+
+日常使用最频繁的入口。搜索不需要登录，下载前需确认认证方式。
+
+| 脚本 | 用途 | 关键参数 |
+|---|---|---|
+| `wf-search.js` | 万方搜索 | `--q` `--type` `--page` `--rows`(≤20) `--no-snippet` |
+| `ieee-search.js` | IEEE 搜索 | `--q` `--type` `--year` `--rows`(≤25) `--page` `--expand` |
+| `ieee-detail.js` | IEEE 论文元数据 | `--arnumber`（作者、DOI、引用等） |
+| `wf-download.js` | 万方下载 | `--q` `--type` `--idx` `--save-as` `--mode launch\|cdp` `--browser` |
+| `ieee-download.js` | IEEE PDF 下载 | `--arnumber` `--save-as` `--mode launch\|cdp` `--browser` |
+| `wf-carsi-login.js` | 万方 CARSI SSO | `--port=9222`（仅 CDP 模式） |
+| `wf-chapter.js` | 万方学位论文分章下载（两步：`--action analyze` 查看树 → `--action download --ids "6,7"` 下载） | `--q` `--idx` `--ids` `--save-as` `--mode launch\|cdp` |
+| `ieee-figures.js` | IEEE 图表提取 | `--arnumber` `--out-dir`（先读 `ieee/figures.md`） |
+
+### Core — 引用提取
+
+从万方论文详情页提取格式化引用。仅 CDP 模式，**需要先完成 CARSI 登录**（运行 `wf-carsi-login.js`），因为点击引用按钮需要登录态。
+
+| 脚本 | 用途 | 关键参数 |
+|---|---|---|
+| `wf-cite.js` | 单篇引用 | `--q` `--type` `--idx` `--format gb7714\|mla\|apa` |
+| `wf-batch-cite.js` | 批量引用 | `--q` `--type` `--count`(≤10) |
+
+### Parallel — 并发
+
+多关键词或多论文并行处理，用 `context-pool.js` 管理浏览器上下文池。
+
+| 脚本 | 用途 | 示例 |
+|---|---|---|
+| `parallel-search.js` | 多关键词并行搜索 | `--q "kw1,kw2" --platform ieee\|wanfang` |
+| `parallel-download.js` | IEEE 多论文并行下载 | `--arnumbers "n1,n2" --save-dir "..."` |
+| `wf-batch-download.js` | 万方期刊批量下载 | `--q` `--type periodical` `--count` `--save-dir`（仅 CDP） |
+
+### Utility — 底层模块
+
+被 Core 脚本内部引用，通常不直接调用，但在定制场景中也可作为 CLI 入口。
+
+| 模块 | 职责 |
+|---|---|
+| `config.js` | 配置中心：默认值 + `PAPER_*` 环境变量覆盖 |
+| `browser-launcher.js` | 浏览器生命周期：launch / CDP 连接 / storageState 持久化 |
+| `navigator.js` | 智能导航：指数退避重试、页面就绪检测、超时处理 |
+| `network-detector.js` | 网络环境检测：判断机构 IP 还是公网、下载是否可行 |
+| `credential-vault.js` | AES-256-GCM 凭据加密存储（PBKDF2 100K 迭代） |
+| `session-manager.js` | 登录会话管理，24 小时 TTL 自动过期 |
+| `cdp-connector.js` | Chrome DevTools Protocol 连接管理 |
+| `context-pool.js` | 浏览器上下文池（parallel-* 脚本使用） |
+| `batch-runner.js` | 批量任务调度与并发控制 |
+| `init-wizard.js` | 首次设置向导（模块，非 CLI：`import { run }` 后调用 `run()`） |
+| `credential-page.js` | 凭据输入表单 — 在浏览器中打开 HTML 页面供用户填写账号密码，加密存入 vault |
+| `launch-cdp.js` | 启动 CDP Chrome/Edge，完全脱离父进程（AI shell 超时不影响 Chrome） |
+| `detect-cdp-download.mjs` | 调试工具 — 检测 CDP 模式下 Chrome 的实际下载目录 |
+| `run.js` / `eval.js` | 通用 Playwright runner / 任意 JavaScript 求值 |
+
+### 凭据设置流程
+
+非机构网络下下载和引用需要登录，登录需要凭据。`credential-page.js` 提供安全的凭据录入方式：
+
+1. **设置主密钥**：`export PAPER_MASTER_KEY="你的密钥"`（只有你知道，AI 无法读取）
+2. **打开凭据表单**：`node ${SKILL_DIR}/scripts/credential-page.js`，会在浏览器中打开一个 HTML 表单
+3. **填写并保存**：在表单中选择平台、填写机构名和账号密码，点击保存
+4. **自动加密**：凭据经 AES-256-GCM 加密后存入 `.state/credentials.json.enc`
+5. **自动登录**：后续 `wf-carsi-login.js` 运行时自动读取并解密凭据，完成 CARSI SSO 登录
+
+> AI 全程只接触密文。明文凭据仅在 Playwright 浏览器内存中流转，不会出现在日志或终端输出中。
+
+## 浏览器策略
+
+不同平台对不同浏览器的接受程度不同，这是从实测中总结的选择逻辑：
+
+| 场景 | 浏览器 | 原因 |
+|---|---|---|
+| 搜索（万方 + IEEE） | Firefox headless | Chrome headless 容易被万方屏蔽返回空白页；Firefox headless 指纹更友好 |
+| 下载（机构网络） | Firefox headless 或 Chrome | IP 认证下网站不区分浏览器 |
+| 下载（非机构网络） | Chrome CDP | 连接桌面 Chrome 以共享真实浏览器指纹和登录状态 |
+| CARSI 登录 | Chrome CDP | 仅 CDP 模式；Firefox 不支持 CDP |
+
+> 批量连续运行多个脚本时加 `--no-kill`，避免互相杀掉浏览器进程。
+
+## 平台差异
+
+| | 万方 | IEEE |
+|---|---|---|
+| 语言 | 中文 | 英文 |
+| 搜索模式 | 一步到位：搜索结果含完整摘要和下载入口 | 渐进式：标题列表 → 展开摘要 → 详情页 → 下载 |
+| 下载认证 | 机构 IP 或 CARSI SSO | 仅机构 IP |
+| Headless 兼容 | Chrome headless 易被屏蔽 | Chrome headless 可能返回 Error 418 |
+
+详细文档：
+- `wanfang/search-download.md` — 万方搜索、下载、引用、分章完整流程
+- `ieee/search-download.md` — IEEE 搜索、下载、图表提取流程
+- `ieee/figures.md` — IEEE 图表提取细节
+- `wanfang/chapters.md` — 万方学位论文分章下载细节
+- `references/download-flow.md` — 下载前网络环境判断与认证流程
+- `references/login-flow.md` — CARSI SSO 登录三种路径（完整/SSO 有效/Cookie 有效）
 
 ## 配置
 
-### 优先级
+不需要配置文件。所有配置通过 `config.js` 内置默认值 + 环境变量覆盖：
 
-1. **环境变量** `PAPER_*`（如 `PAPER_BROWSER_DEFAULT=firefox`）
-2. `config.js` 内置默认值
+| 变量 | 作用 | 默认值 |
+|---|---|---|
+| `PAPER_BROWSER_DEFAULT` | 默认浏览器（`firefox` / `chrome` / `msedge`） | `firefox` |
+| `PAPER_MASTER_KEY` | 凭据加密主密钥 | 无（使用凭据时必须设） |
 
-### 关键环境变量
+凭据以 AES-256-GCM 加密存储在 `.state/credentials.json.enc`。主密钥经 PBKDF2（100K 迭代）派生，仅通过 PAPER_MASTER_KEY 环境变量提供，不会上传到任何服务器，不存储在磁盘文件中。
 
-|  变量 | 作用  |
-| ---|--- |
-|  `PAPER_BROWSER_DEFAULT=firefox` | 切换默认浏览器（firefox/chrome/msedge）  |
-|  `PAPER_MASTER_KEY` | 凭据加密主密钥  |
+## 首次设置
 
-## 已知陷阱（实测验证）
+如果 `.state/.setup-done` 不存在，需要先完成首次设置。推荐使用交互式向导：
 
-### 1. Chrome headless 被万方屏蔽
-搜索用 Chrome headless 可能被万方返回空白页或 `SELECTOR_NOT_FOUND`。
-- 修复：搜索默认用 Firefox headless（设 `PAPER_BROWSER_DEFAULT=firefox`），下载用 CDP Chrome
+```bash
+node ${SKILL_DIR}/scripts/init-wizard.js
+```
 
-### 2. 登录态检测误报（已修复）
-`network-detector.js` 的 `checkWanfangInstitution()` 原先在**整个 body** 中用正则匹配机构名（如"大学""图书馆"），万方首页底部有合作机构链接（如"北京大学图书馆"），导致误报 `"Institutional IP access detected"`。搜索可返回结果但 `accessReady: false`，下载时页面显示"需要登录"。
+向导会自动检测浏览器、安装 Playwright、配置网络模式和凭据加密。详见 `references/setup.md`。
 
-- **已修复**：`extractInstitution` 改为只搜索 header/topbar 元素（`header, .header, .top, .user-info` 等），不再搜索整个 body。同时 `checkWanfangInstitution` 增加了 header 中的登录状态验证（需有"退出登录"按钮或机构标识才判定为已登录）。
-- 症状：搜索成功但下载超时失败
-- 判断：搜索结果的 `accessReady` 字段，`false` = 未真正登录
-- 相关文件：`scripts/network-detector.js` — `checkWanfangInstitution()` 和 `PLATFORMS.wanfang.extractInstitution`
+## 注意事项
 
-### 3. 万方/IEEE 屏蔽 headless
-非机构网络下：
-- 万方：`fault filter abort` 或连接关闭
-- IEEE：Error 418 `Unusual Traffic Detected`
-- 症状：`SELECTOR_NOT_FOUND`（导航到替换页面）
-- 方案：CDP 模式（真实浏览器），或 Firefox headless
+以下是从实际使用中积累的经验，了解它们可以避免踩坑：
 
+- **登录态误判**：`network-detector.js` 曾经在整个页面 body 中搜索机构名（如「大学」「图书馆」）来判断是否已登录，但万方页脚的友情链接中含合作机构名，导致误报。已修复为仅检测 header/topbar 区域中的登录状态元素（「退出登录」按钮或机构标识）。
+- **CDP 下载路径**：CDP 模式下 Playwright 无法拦截 Chrome 的下载事件，文件会存到 Chrome 默认下载目录。`wf-download.js` 会自动读取 Chrome Preferences 获取实际路径，然后将文件复制到 `--save-as` 目标位置。
+- **SSO 会话缓存**：CARSI 登录后，机构 SSO 服务器端会保留会话数小时。在此期间重新登录可跳过账号密码步骤（约 20-30 秒 vs 首次 60-90 秒）。详见 `references/login-flow.md`。
+- **批量任务**：多个脚本连续运行时加 `--no-kill`，否则后续脚本可能杀掉前一个脚本的浏览器进程。
 
-### 4. CDP 模式下载目录不一致（已修复 `wf-download.js`）
-CDP 模式下 Playwright 连接已有 Chrome，**无法拦截下载事件**。Chrome 把文件存到自己的默认下载目录（从 `.state/profiles/chrome-cdp/Default/Preferences` 中读取，如 `E:\Downloads`），而非脚本的 `download.dir` 或 `--save-as`。
+更多已知问题与解决方案见 `references/troubleshooting.md`。
 
-- **已修复**：`wf-download.js` 新增 `getCDPDownloadDir()` 读取 Chrome Preferences 获取实际下载目录，CDP 模式下同时轮询该目录 + 项目下载目录，找到文件后自动复制到 `--save-as` 路径
-- 症状：下载脚本超时但文件实际已在 Chrome 下载目录中
-- 非 CDP 模式（`PAPER_BROWSER_MODE=launch`）：Playwright 可直接控制下载路径，`--save-as` 正常生效
+## 参考文件索引
 
-## 硬规则
-
-### 搜索 vs 下载
-- "检索/找/搜" → 只搜索，不下载
-- "下载/下/保存" → 只下载，不重新搜索
-- 禁止一步到位（搜索+下载合并调用）
-
-### 登录
-- 不做登录预检：先搜再说。大学 IP 认证不产生持久 cookie
-- 万方登录失败只是警告，继续执行
-- 登录过期：按钮从"整篇下载"退化→通知用户
-
-### 浏览器
-- 串行执行（除 parallel-* 脚本用 context-pool）
-- Firefox + 非机构网络：不支持
-- 批量连续跑：加 `--no-kill` 避免互相杀进程
-
-### 输出
-- 最小化：平台、标题、最终路径、下一步
-- 无结果：`noResults=true` → 建议换关键词
-- 一次失败就停：诊断 + 通知用户
+| 文件 | 何时读取 |
+|---|---|
+| `references/setup.md` | 首次设置时 |
+| `references/download-flow.md` | 用户要求下载时 |
+| `references/login-flow.md` | CARSI 登录出问题时 |
+| `references/troubleshooting.md` | 遇到异常行为时 |
+| `wanfang/search-download.md` | 万方平台详细流程 |
+| `ieee/search-download.md` | IEEE 平台详细流程 |
+| `ieee/figures.md` | IEEE 图表提取 |
+| `wanfang/chapters.md` | 万方分章下载 |
+| `references/cross-agent.md` | 适配其他 AI Agent 时 |
+| `knowledge/知识库索引.md` | 需要底层知识（CDP、加密、认证等）时 |

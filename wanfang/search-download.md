@@ -63,7 +63,7 @@ node "${SKILL_DIR}/scripts/wf-download.js" \
 - `--save-as` : Output PDF path
 - `--timeout` : Download timeout in ms, default 120000
 
-**环境变量**：非机构网络需设 `PAPER_MASTER_KEY=<key>`（key 在 `.state/master-key`）。
+**环境变量**：非机构网络需设 `PAPER_MASTER_KEY=<key>`。
 
 **Internal flow**:
 
@@ -173,7 +173,7 @@ node "${SKILL_DIR}/scripts/parallel-search.js" \
 PAPER_MASTER_KEY=<key> node "${SKILL_DIR}/scripts/wf-carsi-login.js" --port=9222 --timeout=60000
 ```
 
-**凭据管理**：存在 `.state/credentials.json.enc`（AES-256-GCM 加密），需 `PAPER_MASTER_KEY` 解密。key 在 `.state/master-key`。
+**凭据管理**：存在 `.state/credentials.json.enc`（AES-256-GCM 加密），需 `PAPER_MASTER_KEY` 解密。key 通过 PAPER_MASTER_KEY 环境变量提供。
 
 ## Citation（CDP 模式）
 

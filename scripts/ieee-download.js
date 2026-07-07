@@ -2,7 +2,7 @@
  * ieee-download.js — IEEE Xplore PDF download
  *
  * Usage:
- *   node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout <ms>] [--mode launch|cdp]
+ *   node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout <ms>] [--mode launch|cdp] [--browser chrome|firefox]
  *
  * Only supports institutional network (IP authentication). No CARSI/login flow.
  */
@@ -13,6 +13,7 @@ import { isInstitutionalAccess } from './network-detector.js';
 import { get } from './config.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 
 function opt(name, def) {
   const i = process.argv.indexOf(name);
@@ -21,12 +22,13 @@ function opt(name, def) {
 
 const arnumber = opt('--arnumber', '');
 const saveAsPath = opt('--save-as', '');
-const dlTimeout = parseInt(opt('--timeout', '60000'));
 const dlMode = opt('--mode', 'launch');
-const cdpPort = parseInt(opt('--cdp-port', '9222'));
+const dlTimeout = parseInt(opt('--timeout', dlMode === 'cdp' ? '120000' : '60000'));
+const cdpPort = parseInt(opt("--cdp-port", "9222"));
+const browserType = opt("--browser", dlMode === "cdp" ? "chrome" : "");
 
 if (!arnumber) {
-  console.error('Usage: node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout 60000] [--mode launch|cdp]');
+  console.error('Usage: node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout 60000] [--mode launch|cdp] [--browser chrome|firefox]');
   process.exit(1);
 }
 
@@ -39,13 +41,34 @@ function getCDPDownloadDir() {
   try {
     if (dlMode !== 'cdp') return null;
     const stateDir = path.resolve(get('state.dir') || '.state');
-    const prefPath = path.join(stateDir, 'profiles', 'chrome-cdp', 'Default', 'Preferences');
-    if (!fs.existsSync(prefPath)) return null;
-    const raw = fs.readFileSync(prefPath, 'utf-8');
-    const prefs = JSON.parse(raw);
-    return prefs?.download?.default_directory || prefs?.savefile?.default_directory || null;
+    const profilesDir = path.join(stateDir, 'profiles');
+
+    // Candidate profile directories to probe, in priority order
+    const candidates = [];
+    const browserProfile = (browserType || 'chrome') + '-cdp';
+    candidates.push(path.join(profilesDir, browserProfile, 'Default', 'Preferences'));
+
+    // Also scan all profile dirs under .state/profiles/ as fallback
+    if (fs.existsSync(profilesDir)) {
+      const dirs = fs.readdirSync(profilesDir);
+      for (const d of dirs) {
+        const prefPath = path.join(profilesDir, d, 'Default', 'Preferences');
+        if (!candidates.includes(prefPath)) candidates.push(prefPath);
+      }
+    }
+
+    for (const prefPath of candidates) {
+      if (!fs.existsSync(prefPath)) continue;
+      const raw = fs.readFileSync(prefPath, 'utf-8');
+      const prefs = JSON.parse(raw);
+      const dlDir = prefs?.download?.default_directory || prefs?.savefile?.default_directory || null;
+      if (dlDir) return dlDir;
+    }
+
+    // No custom download dir configured — Chrome uses system default
+    return path.join(os.homedir(), 'Downloads');
   } catch {
-    return null;
+    return path.join(os.homedir(), 'Downloads');
   }
 }
 
@@ -69,7 +92,9 @@ async function pollDownloadDir(dir, knownFiles, timeout = 60000) {
 (async () => {
   fs.mkdirSync(downloadDir, { recursive: true });
 
-  const { browser, page } = await launch({ headless: true, mode: dlMode, port: cdpPort });
+  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+  if (browserType) launchOpts.browser = browserType;
+  const { browser, page } = await launch(launchOpts);
 
   // IEEE only supports institutional IP access
   try {
@@ -90,10 +115,14 @@ async function pollDownloadDir(dir, knownFiles, timeout = 60000) {
       resolved = true;
       clearTimeout(t);
       if (!fs.existsSync(filepath)) {
-        setTimeout(() => {
-          if (!fs.existsSync(filepath)) { resolve({ error: 'download file disappeared' }); return; }
-          doFinalize(filepath, filename);
-        }, 2000);
+        (async () => {
+          const fDeadline = Date.now() + 5000;
+          while (Date.now() < fDeadline) {
+            await new Promise(r => setTimeout(r, 200));
+            if (fs.existsSync(filepath)) { doFinalize(filepath, filename); return; }
+          }
+          resolve({ error: 'download file disappeared' });
+        })();
         return;
       }
       doFinalize(filepath, filename);
@@ -160,5 +189,6 @@ async function pollDownloadDir(dir, knownFiles, timeout = 60000) {
   });
 
   console.log(JSON.stringify(result, null, 2));
-  await browser.close();
+  if (dlMode === 'cdp') { try { browser.close(); } catch {}; setTimeout(() => process.exit(0), 3000); }
+  else { await browser.close(); }
 })();

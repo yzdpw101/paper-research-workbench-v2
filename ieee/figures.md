@@ -25,7 +25,7 @@ node "${SKILL_DIR}/scripts/ieee-figures.js" \
 |  ------|------  |
 |   `--browser <firefox\|chrome\|msedge>` | 临时切换浏览器   |
 |   `--no-kill` | 不杀残留进程   |
-|   `--connect-existing` | CDP 连接已有浏览器   |
+|   `--mode cdp` | CDP 连接已有浏览器   |
 |   `--cdp-port <n>` | CDP 端口 (默认 9222)   |
 |   `--debug` | 调试模式   |
 

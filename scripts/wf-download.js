@@ -13,6 +13,7 @@ import { goto } from './navigator.js';
 import { get } from './config.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 
 /**
  * Read Chrome's actual download directory from the CDP profile Preferences.
@@ -22,13 +23,34 @@ function getCDPDownloadDir() {
   try {
     if (dlMode !== 'cdp') return null;
     const stateDir = path.resolve(get('state.dir') || '.state');
-    const prefPath = path.join(stateDir, 'profiles', 'chrome-cdp', 'Default', 'Preferences');
-    if (!fs.existsSync(prefPath)) return null;
-    const raw = fs.readFileSync(prefPath, 'utf-8');
-    const prefs = JSON.parse(raw);
-    return prefs?.download?.default_directory || prefs?.savefile?.default_directory || null;
+    const profilesDir = path.join(stateDir, 'profiles');
+
+    // Candidate profile directories to probe, in priority order
+    const candidates = [];
+    const browserProfile = (browserType || 'chrome') + '-cdp';
+    candidates.push(path.join(profilesDir, browserProfile, 'Default', 'Preferences'));
+
+    // Also scan all profile dirs under .state/profiles/ as fallback
+    if (fs.existsSync(profilesDir)) {
+      const dirs = fs.readdirSync(profilesDir);
+      for (const d of dirs) {
+        const prefPath = path.join(profilesDir, d, 'Default', 'Preferences');
+        if (!candidates.includes(prefPath)) candidates.push(prefPath);
+      }
+    }
+
+    for (const prefPath of candidates) {
+      if (!fs.existsSync(prefPath)) continue;
+      const raw = fs.readFileSync(prefPath, 'utf-8');
+      const prefs = JSON.parse(raw);
+      const dlDir = prefs?.download?.default_directory || prefs?.savefile?.default_directory || null;
+      if (dlDir) return dlDir;
+    }
+
+    // No custom download dir configured — Chrome uses system default
+    return path.join(os.homedir(), 'Downloads');
   } catch {
-    return null;
+    return path.join(os.homedir(), 'Downloads');
   }
 }
 
@@ -62,12 +84,13 @@ const wfType = opt('--type', 'paper');
 const targetIdx = parseInt(opt('--idx', '0'));
 const pageNum = opt('--page', '1');
 const saveAsPath = opt('--save-as', '');
-const dlTimeout = parseInt(opt('--timeout', '120000'));
 const dlMode = opt('--mode', 'launch');
+const dlTimeout = parseInt(opt('--timeout', dlMode === 'cdp' ? '120000' : '120000'));
 const cdpPort = parseInt(opt('--cdp-port', '9222'));
+const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
 
 if (!keyword) {
-  console.error('Usage: node wf-download.js --q <keyword> --type <paper|thesis|periodical|...> [--idx 0] [--save-as <path>] [--mode launch|cdp]');
+  console.error('Usage: node wf-download.js --q <keyword> --type <paper|thesis|periodical|...> [--idx 0] [--save-as <path>] [--mode launch|cdp] [--browser chrome|firefox]');
   process.exit(1);
 }
 
@@ -76,7 +99,9 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
 (async () => {
   fs.mkdirSync(downloadDir, { recursive: true });
-  const { browser, context, page } = await launch({ headless: true, mode: dlMode, port: cdpPort });
+  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+  if (browserType) launchOpts.browser = browserType;
+  const { browser, context, page } = await launch(launchOpts);
 
   const result = await new Promise(resolve => {
     const t = setTimeout(() => resolve({ error: 'download timeout' }), dlTimeout);
@@ -86,12 +111,16 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
       if (resolved) return;
       resolved = true;
       clearTimeout(t);
-      // If file was just renamed by Chrome, wait a moment
+      // Chrome renames .crdownload -> final filename; poll until it appears
       if (!fs.existsSync(filepath)) {
-        setTimeout(() => {
-          if (!fs.existsSync(filepath)) { resolve({ error: 'download file disappeared' }); return; }
-          _doFinalize(filepath, filename);
-        }, 2000);
+        (async () => {
+          const fDeadline = Date.now() + 5000;
+          while (Date.now() < fDeadline) {
+            await new Promise(r => setTimeout(r, 200));
+            if (fs.existsSync(filepath)) { _doFinalize(filepath, filename); return; }
+          }
+          resolve({ error: 'download file disappeared' });
+        })();
         return;
       }
       _doFinalize(filepath, filename);
@@ -196,6 +225,12 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
         try { preCdpFiles = new Set(fs.readdirSync(cdpDlDir)); } catch { preCdpFiles = new Set(); }
       }
 
+      // Register page listener BEFORE click (for thesis download page detection)
+      const newPagePromise = context.waitForEvent('page', {
+        predicate: p => p.url().includes('f.wanfangdata.com.cn'),
+        timeout: 15000
+      }).catch(() => null);
+
       await page.$eval('[data-target="wf-dl"]', el => el.click());
 
       // Start poll fallback after click — poll both project dir and CDP dir
@@ -210,32 +245,26 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
         }
       });
 
-      let dlPage = null;
-      const deadline = Date.now() + 15000; while (Date.now() < deadline) {
-        for (const p of context.pages()) {
-          if (p !== page && p.url().includes('f.wanfangdata.com.cn')) { dlPage = p; break; }
-        }
-        if (dlPage) break;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
+      // Wait for thesis download page (event-driven, no polling)
+      const dlPage = await newPagePromise;
       if (dlPage) {
         await dlPage.bringToFront();
         await dlPage.waitForLoadState('domcontentloaded');
-        const dlDeadline = Date.now() + 30000; while (Date.now() < dlDeadline) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          const txt = await dlPage.evaluate(() => (document.body?.innerText || '').replace(/\s+/g, ' '));
-          if (txt.includes('点击此处')) {
-            await dlPage.evaluate(() => {
-              document.querySelectorAll('a').forEach(a => { if ((a.textContent || '').includes('点击此处')) a.click(); });
-            });
-            break;
-          }
+        try {
+          const clickHere = dlPage.locator('a:has-text("点击此处")');
+          await clickHere.waitFor({ timeout: 30000 });
+          await clickHere.click();
+        } catch {
+          // "点击此处" may not appear (periodical or already triggered download)
         }
       }
     })().catch(e => { clearTimeout(t); resolve({ error: e.message }); });
   });
 
   console.log(JSON.stringify(result, null, 2));
-  await browser.close();
+  // CDP mode: disconnect fast, force exit if it hangs (result already printed)
+  if (dlMode === 'cdp') {
+    try { browser.close(); } catch {}
+    setTimeout(() => process.exit(0), 3000);
+  } else { await browser.close(); }
 })();
