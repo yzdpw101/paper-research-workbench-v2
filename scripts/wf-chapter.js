@@ -44,53 +44,6 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
 // ── CDP download helpers ────────────────────────────────────────────────────
 
-function getCDPDownloadDir() {
-  try {
-    if (dlMode !== 'cdp') return null;
-    const stateDir = path.resolve(get('state.dir') || '.state');
-    const profilesDir = path.join(stateDir, 'profiles');
-    const candidates = [];
-    const bp = (browserType || 'chrome') + '-cdp';
-    candidates.push(path.join(profilesDir, bp, 'Default', 'Preferences'));
-    if (fs.existsSync(profilesDir)) {
-      for (const d of fs.readdirSync(profilesDir)) {
-        const pp = path.join(profilesDir, d, 'Default', 'Preferences');
-        if (!candidates.includes(pp)) candidates.push(pp);
-      }
-    }
-    for (const pp of candidates) {
-      if (!fs.existsSync(pp)) continue;
-      const prefs = JSON.parse(fs.readFileSync(pp, 'utf-8'));
-      const dd = prefs?.download?.default_directory || prefs?.savefile?.default_directory || null;
-      if (dd) return dd;
-    }
-    return path.join(os.homedir(), 'Downloads');
-  } catch { return path.join(os.homedir(), 'Downloads'); }
-}
-
-function waitForZip(dirs, startTime, timeout) {
-  return new Promise((resolve) => {
-    const check = () => {
-      if (Date.now() - startTime > timeout) { resolve(null); return; }
-      for (const dir of dirs) {
-        try {
-          for (const f of fs.readdirSync(dir)) {
-            if (!f.endsWith('.zip')) continue;
-            const fp = path.join(dir, f);
-            const stat = fs.statSync(fp);
-            if (stat.mtimeMs > startTime - 3000 && stat.size > 1024) {
-              setTimeout(() => resolve(fp), 1000); // let Chrome finish
-              return;
-            }
-          }
-        } catch {}
-      }
-      setTimeout(check, 500);
-    };
-    check();
-  });
-}
-
 // ── Chapter page helpers ────────────────────────────────────────────────────
 
 async function openChapterPage(context, page) {

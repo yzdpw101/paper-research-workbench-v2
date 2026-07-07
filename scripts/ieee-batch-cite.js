@@ -1,0 +1,103 @@
+/**
+ * ieee-batch-cite.js — IEEE Xplore batch citation export (no login needed)
+ *
+ * Usage:
+ *   node ieee-batch-cite.js --q "keyword" [--count 3] [--format bibtex|plain|ris|refworks]
+ *                          [--save-as <path>] [--mode launch|cdp]
+ */
+import { launch } from './browser-launcher.js';
+import { goto } from './navigator.js';
+import { get } from './config.js';
+import { getCDPDownloadDir, waitForTxt } from './cdp-download.js';
+import fs from 'node:fs';
+import path from 'node:path';
+
+function opt(name, def) {
+  const i = process.argv.indexOf(name);
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : def;
+}
+
+const keyword = opt('--q', '');
+const count = parseInt(opt('--count', '3'));
+const format = opt('--format', 'bibtex');
+const saveAsPath = opt('--save-as', '');
+const dlMode = opt('--mode', 'launch');
+const cdpPort = parseInt(opt('--cdp-port', '9222'));
+const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
+
+if (!keyword) {
+  console.error('Usage: node ieee-batch-cite.js --q <keyword> [--count 3] [--format bibtex|plain|ris|refworks] [--save-as <path>] [--mode launch|cdp]');
+  process.exit(1);
+}
+
+const searchUrl = 'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=' + encodeURIComponent(keyword) + '&highlight=true&returnType=SEARCH&matchPubs=true&rowsPerPage=' + Math.min(count, 10);
+const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
+
+(async () => {
+  fs.mkdirSync(downloadDir, { recursive: true });
+  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+  if (browserType) launchOpts.browser = browserType;
+  const { browser, page } = await launch(launchOpts);
+
+  try {
+    await goto(page, searchUrl, { timeout: 60000, waitFor: '.results-actions-selectall' });
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Select All on Page
+    await page.locator('label.results-actions-selectall').first().click();
+    await new Promise(r => setTimeout(r, 500));
+
+    // Click Export
+    await page.locator('li.export-filter').first().click();
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Select Citations tab
+    const citationsTab = page.locator('[role=tab]:has-text("Citations"), button:has-text("Citations"), a:has-text("Citations")').first();
+    if (await citationsTab.count() > 0) {
+      await citationsTab.click();
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    // Select format radio
+    const fmtMap = { bibtex: 'BibTeX', plain: 'Plain Text', ris: 'RIS', refworks: 'RefWorks' };
+    const fmtLabel = fmtMap[format] || 'BibTeX';
+    const formatRadio = page.locator(`label:has-text("${fmtLabel}")`).first();
+    if (await formatRadio.count() > 0) {
+      await formatRadio.click();
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    // Click Download
+    const startTime = Date.now();
+    await page.locator('button:has-text("Download")').first().click();
+
+    // CDP mode: poll for .txt
+    if (dlMode === 'cdp') {
+      const cdpDir = getCDPDownloadDir(browserType || 'chrome');
+      const dirs = [downloadDir];
+      if (cdpDir && cdpDir !== downloadDir) dirs.push(cdpDir);
+      const txtPath = await waitForTxt(dirs, startTime, 60000);
+      if (txtPath) {
+        const filename = path.basename(txtPath);
+        const dest = saveAsPath || path.join(downloadDir, filename);
+        const dd = path.dirname(dest);
+        if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
+        if (txtPath !== dest) fs.copyFileSync(txtPath, dest);
+        console.log(JSON.stringify({ status: 'ok', download: { name: filename, path: dest, size: fs.statSync(dest).size, format } }, null, 2));
+      } else {
+        console.log(JSON.stringify({ status: 'error', error: 'citation file not found — download may have failed' }, null, 2));
+      }
+    } else {
+      console.log(JSON.stringify({ status: 'ok', note: 'check download directory for citations.txt' }, null, 2));
+    }
+  } catch (e) {
+    console.log(JSON.stringify({ status: 'error', error: e.message }, null, 2));
+  }
+
+  if (dlMode === 'cdp') {
+    try { browser.close(); } catch {}
+    setTimeout(() => process.exit(0), 3000);
+  } else {
+    await browser.close();
+  }
+})();

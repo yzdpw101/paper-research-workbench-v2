@@ -37,6 +37,92 @@ async function nativeFill(page, selector, value) {
   }, { sel: selector, val: value });
 }
 
+// ─── SSO-only login (for IEEE and other services) ───────────────────────────
+
+/**
+ * Fill SSO credentials and submit on e1s1 page.
+ * Does NOT navigate to any service — assumes page is already on e1s1/e1s2.
+ *
+ * @param {import('playwright').Page} page — already on SSO login page
+ * @param {{username: string, password: string}} creds
+ * @param {{timeout?: number}} [opts]
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export async function ssoLogin(page, creds, opts = {}) {
+  const { username, password } = creds;
+  const navTimeout = opts.timeout || 30000;
+
+  try {
+    // Step 4: Fill SSO form
+    console.log('[sso] Awaiting SSO login form...');
+    let ssoReady = false;
+    for (let i = 0; i < 15; i++) {
+      await sleep(2000);
+      const hasPasswordField = await page.$('input[type="password"]');
+      if (!hasPasswordField) continue;
+
+      console.log('[sso] SSO form detected, filling credentials...');
+      await page.evaluate(({ u, p }) => {
+        const userEl = document.querySelector('#username');
+        const passEl = document.querySelector('#password');
+        if (userEl) {
+          const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          s.call(userEl, u); userEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (passEl) {
+          const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          s.call(passEl, p); passEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        const dc = document.querySelector('#donotcache');
+        const rc = document.querySelector('#_shib_idp_revokeConsent');
+        if (dc) dc.checked = false;
+        if (rc) rc.checked = false;
+      }, { u: username, p: password });
+
+      await sleep(500);
+      const submitted = await page.evaluate(() => {
+        const btn = document.querySelector('button[name="_eventId_proceed"]');
+        if (btn) { btn.click(); return 'proceed'; }
+        const anyBtn = document.querySelector('button[type="submit"], input[type="submit"]');
+        if (anyBtn) { anyBtn.click(); return 'fallback'; }
+        const form = document.querySelector('form');
+        if (form) { form.submit(); return 'form'; }
+        return 'none';
+      });
+      console.log(`[sso] Submitted SSO form (${submitted})`);
+      ssoReady = true;
+      break;
+    }
+    if (!ssoReady) return { success: false, message: 'SSO login form not found on page' };
+
+    // Step 5: e1s2 authorization
+    await sleep(5000);
+    try { await page.waitForLoadState('networkidle', { timeout: navTimeout }); } catch {}
+    if (page.url().includes('execution=e1s2')) {
+      console.log('[sso] Authorization page → Accept...');
+      await page.evaluate(() => {
+        const radio = document.querySelector('#_shib_idp_globalConsent');
+        if (radio) { radio.checked = true; radio.click(); }
+      });
+      await sleep(500);
+      await page.evaluate(() => {
+        const accept = document.querySelector('input[value="Accept"]');
+        if (accept) accept.click();
+      });
+      console.log('[sso] Accept clicked');
+      await sleep(5000);
+      try { await page.waitForLoadState('networkidle', { timeout: navTimeout }); } catch {}
+    } else {
+      console.log('[sso] Authorization skipped (no e1s2)');
+    }
+
+    console.log('[sso] SUCCESS');
+    return { success: true, message: 'SSO login successful' };
+  } catch (err) {
+    return { success: false, message: `SSO error: ${err.message}` };
+  }
+}
+
 // ─── Login status check ─────────────────────────────────────────────────────
 
 /**

@@ -13,66 +13,7 @@ import { goto } from './navigator.js';
 import { get } from './config.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
-
-/**
- * Read Chrome's actual download directory from the CDP profile Preferences.
- * Returns null if not in CDP mode or Preferences can't be read.
- */
-function getCDPDownloadDir() {
-  try {
-    if (dlMode !== 'cdp') return null;
-    const stateDir = path.resolve(get('state.dir') || '.state');
-    const profilesDir = path.join(stateDir, 'profiles');
-
-    // Candidate profile directories to probe, in priority order
-    const candidates = [];
-    const browserProfile = (browserType || 'chrome') + '-cdp';
-    candidates.push(path.join(profilesDir, browserProfile, 'Default', 'Preferences'));
-
-    // Also scan all profile dirs under .state/profiles/ as fallback
-    if (fs.existsSync(profilesDir)) {
-      const dirs = fs.readdirSync(profilesDir);
-      for (const d of dirs) {
-        const prefPath = path.join(profilesDir, d, 'Default', 'Preferences');
-        if (!candidates.includes(prefPath)) candidates.push(prefPath);
-      }
-    }
-
-    for (const prefPath of candidates) {
-      if (!fs.existsSync(prefPath)) continue;
-      const raw = fs.readFileSync(prefPath, 'utf-8');
-      const prefs = JSON.parse(raw);
-      const dlDir = prefs?.download?.default_directory || prefs?.savefile?.default_directory || null;
-      if (dlDir) return dlDir;
-    }
-
-    // No custom download dir configured — Chrome uses system default
-    return path.join(os.homedir(), 'Downloads');
-  } catch {
-    return path.join(os.homedir(), 'Downloads');
-  }
-}
-
-/**
- * CDP filesystem download fallback.
- * Polls `dir` every 500ms for new files not in `knownFiles`.
- * Returns the full path of the first new file found, or null on timeout.
- */
-async function pollDownloadDir(dir, knownFiles, timeout = 60000) {
-  const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
-    const entries = fs.readdirSync(dir).filter(f =>
-      !knownFiles.has(f) && !f.endsWith('.tmp') && !f.endsWith('.crdownload')
-    );
-    if (entries.length > 0) {
-      await new Promise(r => setTimeout(r, 1000));
-      return path.join(dir, entries[entries.length - 1]);
-    }
-    await new Promise(r => setTimeout(r, 500));
-  }
-  return null;
-}
+import { getCDPDownloadDir, pollDownloadDir } from './cdp-download.js';
 
 function opt(name, def) {
   const i = process.argv.indexOf(name);
