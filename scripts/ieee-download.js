@@ -13,7 +13,27 @@ import { isInstitutionalAccess } from './network-detector.js';
 import { get } from './config.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { getCDPDownloadDir, waitForZip } from './cdp-download.js';
+import { getCDPDownloadDir, pollDownloadDir } from './cdp-download.js';
+
+function opt(name, def) {
+  const i = process.argv.indexOf(name);
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : def;
+}
+
+const arnumber = opt('--arnumber', '');
+const saveAsPath = opt('--save-as', '');
+const dlMode = opt('--mode', 'launch');
+const dlTimeout = parseInt(opt('--timeout', dlMode === 'cdp' ? '120000' : '60000'));
+const cdpPort = parseInt(opt('--cdp-port', '9222'));
+const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
+
+if (!arnumber) {
+  console.error('Usage: node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout <ms>] [--mode launch|cdp] [--browser chrome|firefox]');
+  process.exit(1);
+}
+
+const stampPDF = 'https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=' + arnumber;
+const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
 // ── Main ─────────────────────────────────────────────────────────────────
 

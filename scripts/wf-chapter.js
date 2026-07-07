@@ -16,7 +16,7 @@ import { get } from './config.js';
 import { checkStatus } from './wf-carsi-login.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
+import { getCDPDownloadDir, waitForZip } from './cdp-download.js';
 
 function opt(name, def) {
   const i = process.argv.indexOf(name);
@@ -158,6 +158,23 @@ async function getNodeList(chPage) {
       const startTime = Date.now();
       const cdpDlDir = getCDPDownloadDir();
 
+      // Launch mode: set up download listener before clicking confirm
+      let dlResolve;
+      const dlPromise = dlMode !== 'cdp' ? new Promise(resolve => {
+        dlResolve = resolve;
+        chPage.on('download', async (dl) => {
+          const dest = saveAsPath || path.join(downloadDir, dl.suggestedFilename());
+          const dd = path.dirname(dest);
+          if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
+          try {
+            const stream = await dl.createReadStream();
+            const ws = fs.createWriteStream(dest);
+            await new Promise((res, rej) => { stream.pipe(ws); ws.on('finish', res); ws.on('error', rej); stream.on('error', rej); });
+          } catch (_) { await dl.saveAs(dest); }
+          resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size } });
+        });
+      }) : null;
+
       // Click confirm
       await chPage.evaluate(() => { const btns = document.querySelectorAll("button"); for (const b of btns) { if (b.textContent.includes("确认下载")) { b.click(); break; } } });
 
@@ -177,8 +194,11 @@ async function getNodeList(chPage) {
           console.log(JSON.stringify({ status: 'error', error: 'ZIP not found — download may have failed' }, null, 2));
         }
       }
-      // launch mode: rely on Playwright download event (handled by listener)
-      // This works because launch mode creates its own browser that can intercept downloads
+      // Launch mode: wait for Playwright download event
+      if (dlMode !== 'cdp' && dlPromise) {
+        const r = await dlPromise;
+        console.log(JSON.stringify(r, null, 2));
+      }
     }
 
   } catch (e) {
