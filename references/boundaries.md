@@ -13,15 +13,14 @@
 
 | 功能 | 万方 | IEEE |
 |------|------|------|
-| 搜索 | ✅ `wf-search.js` | ✅ `ieee-search.js` |
-| 单篇下载 | ✅ `wf-download.js` | ✅ `ieee-download.js` |
-| CARSI 登录 | ✅ 完整自动化 | ⚠️ 首次需手动，之后 SSO 会话复用 |
-| 分章下载 | ✅ 两步（analyze + download） | — |
-| 引用提取 | ✅ `wf-cite.js`（需登录） | — |
-| 批量引用 | ✅ `wf-batch-cite.js` | ✅ `ieee-batch-cite.js`（不需登录） |
-| 批量下载 | ✅ `wf-batch-download.js` | ✅ `ieee-batch-download.js`（需登录，≤10篇） |
-| 图表提取 | — | ✅ `ieee-figures.js` |
-| 论文详情 | — | ✅ `ieee-detail.js` |
+| 搜索 | ✅ | ✅ |
+| 单篇下载 | ✅ | ✅ |
+| CARSI 登录 | ✅ 完整自动化 | ✅ 直达 SSO（`ieee-carsi-login.js`） |
+| 分章下载 | ✅ 两步 | — |
+| 引用提取 | ✅（需登录） | — |
+| 批量引用 | ✅ | ✅（不需登录） |
+| 批量下载 | ✅ | ✅（需登录，≤10篇） |
+| 图表提取 | — | ✅ |
 
 ## CDP 模式须知
 
@@ -47,7 +46,6 @@
 
 ## 不支持的功能
 
-- IEEE 非机构网络 CARSI 登录（仅支持机构 IP）
 - 万方分章下载的一步完成（必须两步：先 analyze 再 download）
 - CDP 模式下自动启动 Chrome（需用户手动）
 - Edge 浏览器（代码支持但未全面测试）
