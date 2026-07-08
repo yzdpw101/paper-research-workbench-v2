@@ -71,6 +71,21 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
     // Click Download — use specific class selector with force click
     const startTime = Date.now();
+
+    // Launch mode: set up download listener
+    let dlResolve;
+    const dlPromise = dlMode !== 'cdp' ? new Promise(resolve => { dlResolve = resolve;
+      const onDl = async (dl) => {
+        const dest = saveAsPath || path.join(downloadDir, dl.suggestedFilename());
+        const dd = path.dirname(dest);
+        if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
+        try { const s = await dl.createReadStream(); const ws = fs.createWriteStream(dest); await new Promise((res, rej) => { s.pipe(ws); ws.on('finish', res); ws.on('error', rej); s.on('error', rej); }); } catch { await dl.saveAs(dest); }
+        resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size, format } });
+      };
+      for (const p of browser.contexts()[0].pages()) p.on('download', onDl);
+      browser.contexts()[0].on('page', p => p.on('download', onDl));
+    }) : null;
+
     await page.locator('button.stats-SearchResults_Citation_Download').first().click({ force: true, timeout: 10000 });
 
     // CDP mode: poll for .txt
@@ -89,6 +104,10 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
       } else {
         console.log(JSON.stringify({ status: 'error', error: 'citation file not found' }, null, 2));
       }
+    }
+    // Launch mode: wait for download promise
+    if (dlPromise) { const r = await Promise.race([dlPromise, new Promise(res => setTimeout(() => res({ status: "error", error: "download event not captured" }), 60000))]);
+      console.log(JSON.stringify(r, null, 2));
     }
   } catch (e) {
     console.log(JSON.stringify({ status: 'error', error: e.message }, null, 2));
