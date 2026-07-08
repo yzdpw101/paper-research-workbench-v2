@@ -131,6 +131,20 @@ export async function launch(options = {}) {
 
   const launchOptions = { headless };
 
+  // Anti-detection for Chrome headless (Wanfang blocks headless Chrome)
+  if (browserName === 'chrome' || browserName === 'msedge') {
+    launchOptions.ignoreDefaultArgs = ['--enable-automation'];
+    launchOptions.args = [
+      '--disable-blink-features=AutomationControlled',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--window-size=1920,1080',
+      '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0',
+    ];
+  }
+
   const browser = await browserEntry.launch(launchOptions);
   const context = await browser.newContext();
   const page = await context.newPage();
