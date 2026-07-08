@@ -92,6 +92,8 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       await page.waitForSelector('div.normal-list', { timeout: 15000 });
     }
 
+    // Clear any previous selections
+    try { await page.locator("span.clear-btn").first().click({ force: true, timeout: 3000 }); await new Promise(r => setTimeout(r, 300)); } catch {}
     // ── Select checkboxes by --ids ──
     const cbs = page.locator('div.normal-list input.ivu-checkbox-input');
     for (const id of ids) {
