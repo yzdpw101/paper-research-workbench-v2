@@ -25,7 +25,7 @@
 1. 将所有 `${SKILL_DIR}` 替换为 skill 根目录的绝对路径
 2. 确认目标 Agent 能执行 `node` 命令
 3. 确认 Playwright 已安装：`npm install playwright`
-4. 确认浏览器已安装：`npx playwright install firefox`（仅 Firefox；Chrome/Edge 用系统自带）
+4. 确认浏览器已安装：`npx playwright install chromium`
 
 ## 前提条件
 
@@ -37,11 +37,11 @@
 
 |  事项 | 说明  |
 | ------|------ |
-|  26 个脚本 | v1 只有 15 个，v2 新增 Core/Browser Layer 模块  |
+|  30 个脚本 | 搜索、下载、登录、批量等完整功能模块  |
 |  `config.js` | 纯代码，无配置文件，默认值 + PAPER_* 环境变量 |
 |  `init-wizard.js` | 替代 v1 的 `init.js` + `set-browser.js`  |
 |  Headless 默认 true | 如需可视化，设 `PAPER_BROWSER_HEADLESS=false`  |
-|  Firefox 限制 | 仅支持机构网络；非机构网络需 Chrome/Edge + CDP  |
+|  Chrome | ✅ 完整支持 | CDP + launch 双模式，反检测处理  |
 |  CDP 模式 | Chrome/Edge 需手动启动带 `--remote-debugging-port`，然后 `--mode cdp`  |
 |  凭据加密 | AES-256-GCM，主密钥优先用 Windows DPAPI  |
 
@@ -49,6 +49,6 @@
 
 |  浏览器 | v2 状态 | 说明  |
 | --------|---------|------ |
-|  Firefox | ✅ 机构网络完整支持 | 非机构网络会报错  |
+|  Firefox | ✅ 全面支持 | 可用 `--browser firefox` 切换，非机构网络不支持 CDP |
 |  Chrome | ✅ 完整支持 | CDP + persistent + launch 三种模式  |
-|  Edge | ⚠️ 代码已支持 | Chrome 的 Edge 等价物，未全面实机测试  |
+|  Edge | ✅ 完整支持 | Chrome 的 Edge 等价物，使用 `--browser msedge` |

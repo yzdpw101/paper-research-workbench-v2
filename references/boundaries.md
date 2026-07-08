@@ -4,10 +4,10 @@
 
 | 环境 | 浏览器 | 搜索 | 下载 | 登录 |
 |------|--------|------|------|------|
-| 机构网络（校园网/VPN） | Firefox / Chrome | ✅ headless | ✅ 直接下载 | 不需要 |
-| 非机构网络 | Chrome CDP | ✅ CDP | ✅ 需 CARSI | `wf-carsi-login.js` |
+| 机构网络（校园网/VPN） | Chrome headless | ✅ | ✅ 直接下载 | 不需要 |
+| 非机构网络 | Chrome CDP | ✅ CDP | ✅ 需 CARSI | `wf-carsi-login.js` / `ieee-carsi-login.js` |
 
-> 非机构网络需 Chrome CDP。
+Chrome headless 反检测：伪装 Firefox UA + 移除 webdriver 标记 + 禁用自动化控制提示。
 
 ### CARSI 登录适用范围
 

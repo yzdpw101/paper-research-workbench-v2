@@ -48,7 +48,7 @@ node ${SKILL_DIR}/scripts/ieee-download.js --arnumber 1234567 --save-as "paper.p
 
 ### 下载 — 非机构网络（需要 CARSI 登录）
 
-仅万方支持 CARSI SSO（IEEE 当前只支持机构 IP）。三步流程：
+非机构网络下通过 CARSI SSO 登录。三步流程：
 
 ```bash
 # 1. 启动 CDP Chrome（带远程调试端口）
@@ -77,8 +77,8 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | `wf-detail.js` | 万方详情页元数据提取 | `--url` `--mode launch|cdp` |
 | `ieee-search.js` | IEEE 搜索 | `--q` `--type` `--year` `--rows`(≤25) `--page` `--no-snippet` |
 | `ieee-detail.js` | IEEE 论文元数据 | `--arnumber`（作者、DOI、引用等） |
-| `wf-download.js` | 万方下载 | `--q` `--type` `--year` `--idx` `--save-as` `--mode launch|cdp` `--browser` |\|cdp` `--browser` |
-| `ieee-download.js` | IEEE PDF 下载 | `--arnumber` `--save-as` `--mode launch\|| `wf-download.js` | 万方下载 | `--q` `--type` `--year` `--idx` `--save-as` `--mode launch|cdp` `--browser` |
+| `wf-download.js` | 万方下载 | `--q` `--type` `--year` `--idx` `--save-as` `--mode launch\|cdp` `--browser` |
+| `ieee-download.js` | IEEE PDF 下载 | `--arnumber` `--save-as` `--mode launch\|cdp` `--browser` |
 | `wf-carsi-login.js` | 万方 CARSI SSO | `--port=9222`（仅 CDP 模式） |
 | `wf-chapter.js` | 万方学位论文分章下载（两步：`--action analyze` 查看树 → `--action download --ids "6,7"` 下载） | `--q` `--idx` `--ids` `--save-as` `--mode launch\|cdp` |
 | `ieee-figures.js` | IEEE 图表提取 | `--arnumber` `--out-dir`（先读 `ieee/figures.md`） |
@@ -159,8 +159,8 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 |---|---|---|
 | 语言 | 中文 | 英文 |
 | 搜索模式 | 一步到位：搜索结果含完整摘要和下载入口 | 渐进式：标题列表 → 展开摘要 → 详情页 → 下载 |
-| 下载认证 | 机构 IP 或 CARSI SSO | 仅机构 IP |
-| Headless 兼容 | Chrome headless 易被屏蔽 | Chrome headless 可能返回 Error 418 |
+| 下载认证 | 机构 IP 或 CARSI SSO | 机构 IP 或 CARSI SSO |
+| Headless 兼容 | ✅ Chrome（反检测处理） | ✅ Chrome |
 
 详细文档：
 - `wanfang/search-download.md` — 万方搜索、下载、引用、分章完整流程
@@ -176,7 +176,7 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 | 变量 | 作用 | 默认值 |
 |---|---|---|
-| `PAPER_BROWSER_DEFAULT` | 默认浏览器（`firefox` / `chrome` / `msedge`） | `firefox` |
+| `PAPER_BROWSER_DEFAULT` | 默认浏览器（`chrome` / `firefox` / `msedge`） | `chrome` |
 | `PAPER_MASTER_KEY` | 凭据加密主密钥 | 无（使用凭据时必须设） |
 
 凭据以 AES-256-GCM 加密存储在 `.state/credentials.json.enc`。主密钥经 PBKDF2（100K 迭代）派生，仅通过 PAPER_MASTER_KEY 环境变量提供，不会上传到任何服务器，不存储在磁盘文件中。
