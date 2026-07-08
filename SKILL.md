@@ -103,7 +103,7 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 |---|---|---|
 | `parallel-search.js` | 多关键词并行搜索 | `--q "kw1,kw2" --platform ieee\|wanfang` `--mode launch\|cdp` |
 | `parallel-download.js` | IEEE 多论文并行下载 | `--arnumbers "n1,n2" --save-dir "..."` |
-| `wf-batch-download.js` | 万方期刊批量下载 | `--q` `--ids "0,2,5"` `--type periodical` `--save-dir` (CDP) |
+| `wf-batch-download.js` | 万方期刊批量下载 | `--q` `--ids "0,2,5"` `--type periodical` `--save-dir` `--mode launch|cdp` |
 
 ### Utility — 底层模块
 
