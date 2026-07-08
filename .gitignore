@@ -1,3 +1,4 @@
 .state/
 .reasonix/
 .agents/
+scripts/config.js
