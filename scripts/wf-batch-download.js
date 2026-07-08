@@ -92,20 +92,19 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       await page.waitForSelector('div.normal-list', { timeout: 15000 });
     }
 
-    // Clear and select via JS to bypass Vue SPA async issues
+    // Clear and select — use label click instead of JS checked to avoid Vue reactivity issues
     await page.evaluate((ids) => {
-      // First uncheck all
-      document.querySelectorAll('div.normal-list input.ivu-checkbox-input').forEach(cb => {
-        cb.checked = false;
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-      // Then check target ids
-      const cbs = document.querySelectorAll('div.normal-list input.ivu-checkbox-input');
+      // Click clear button first
+      const clearBtn = document.querySelector('span.clear-btn');
+      if (clearBtn) clearBtn.click();
+    });
+    await new Promise(r => setTimeout(r, 800));
+
+    // Click checkbox labels by id
+    await page.evaluate((ids) => {
+      const labels = document.querySelectorAll('div.normal-list label.ivu-checkbox-wrapper');
       for (const id of ids) {
-        if (cbs[id]) {
-          cbs[id].checked = true;
-          cbs[id].dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        if (labels[id]) labels[id].click();
       }
     }, ids);
     await new Promise(r => setTimeout(r, 1000));

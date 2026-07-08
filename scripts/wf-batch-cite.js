@@ -69,18 +69,17 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
     }
 
 
-    // Clear and select via JS to bypass Vue SPA async issues
+    // Clear and select — use label click instead of JS checked to avoid Vue reactivity issues
+    await page.evaluate(() => {
+      const clearBtn = document.querySelector('span.clear-btn');
+      if (clearBtn) clearBtn.click();
+    });
+    await new Promise(r => setTimeout(r, 800));
+
     await page.evaluate((ids) => {
-      document.querySelectorAll('div.normal-list input.ivu-checkbox-input').forEach(cb => {
-        cb.checked = false;
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-      const cbs = document.querySelectorAll('div.normal-list input.ivu-checkbox-input');
+      const labels = document.querySelectorAll('div.normal-list label.ivu-checkbox-wrapper');
       for (const id of ids) {
-        if (cbs[id]) {
-          cbs[id].checked = true;
-          cbs[id].dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        if (labels[id]) labels[id].click();
       }
     }, ids);
     await new Promise(r => setTimeout(r, 1000));
