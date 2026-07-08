@@ -185,7 +185,7 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 如果 `.state/.setup-done` 不存在，引导用户完成：
 
-1. 询问浏览器偏好（Chrome/Edge 推荐，Firefox 仅机构网络）
+1. 询问浏览器偏好，写入 `scripts/config.js` 的 `browser.default`（Chrome/Edge 推荐，Firefox 仅机构网络）
 2. 安装依赖：`npm install playwright` + `npx playwright install chromium`
 3. 创建 `.state/.setup-done` 标记
 

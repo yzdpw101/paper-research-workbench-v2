@@ -7,6 +7,7 @@
 AI 检测到 `.state/.setup-done` 不存在时，直接询问：
 
 1. **浏览器选择**：「你用什么浏览器？① Chrome ② Edge ③ Firefox」
+   - 根据选择修改 `scripts/config.js` 中 `browser.default` 的值
    - Chrome/Edge → 全功能（launch + CDP）
    - Firefox → ⚠️ 仅机构网络，无法 CARSI 登录
 2. **安装依赖**：`npm install playwright` + `npx playwright install chromium`
