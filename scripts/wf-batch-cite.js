@@ -2,22 +2,23 @@
  * wf-batch-cite.js — Wanfang batch citation extraction (CDP mode)
  *
  * Usage:
- *   node wf-batch-cite.js --q <keyword> --ids "0,2,5" [--type periodical] [--port 9222]
+ *   node wf-batch-cite.js --q <keyword> --ids "0,2,5" [--type periodical] [--port 9222] [--mode launch|cdp]
  *
  * --q      : Search keyword (required)
  * --ids    : Result indices to cite, comma-separated, 0-based, max 10
  * --type   : paper|periodical|conference, default "periodical" (thesis not supported for batch)
  * --port   : CDP port, default 9222
+ * --mode   : launch|cdp, default cdp (launch works on institutional network)
  *
  * Flow:
  *   Search page → select checkboxes by ids → click 批量引用
  *   → new tab /export → extract GB/T 7714 citations → close tab
  *
- * Browser: CDP mode only. Citation extraction REQUIRES CARSI login (wf-carsi-login.js).
+ * Browser: launch or CDP mode. Requires CARSI login for CDP (wf-carsi-login.js).
  * Limit: max 10 items. Thesis type not supported (no batch ops).
  */
 
-import { chromium } from 'playwright';
+import { launch } from './browser-launcher.js';
 import { checkStatus } from './wf-carsi-login.js';
 
 function opt(name, def) {
@@ -29,9 +30,10 @@ const keyword = opt('--q', '');
 const wfType = opt('--type', 'periodical');
 const idsArg = opt('--ids', '');
 const cdpPort = parseInt(opt('--port', '9222'));
+const dlMode = opt('--mode', 'cdp');
 
 if (!keyword || !idsArg) {
-  console.error('Usage: node wf-batch-cite.js --q <keyword> --ids "0,2,5" [--type periodical] [--port 9222]');
+  console.error('Usage: node wf-batch-cite.js --q <keyword> --ids "0,2,5" [--type periodical] [--port 9222] [--mode launch|cdp]');
   process.exit(1);
 }
 
@@ -42,13 +44,9 @@ if (ids.length > 10) { console.error('Error: max 10 items'); process.exit(1); }
 const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponent(keyword);
 
 (async () => {
-  const browser = await chromium.connectOverCDP({
-    endpointURL: 'http://127.0.0.1:' + cdpPort,
-    noDefaults: true,
-  });
-  const page = browser.contexts()[0].pages().length > 0
-    ? browser.contexts()[0].pages()[0]
-    : await browser.contexts()[0].newPage();
+  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+  if (dlMode === 'cdp') launchOpts.browser = 'chrome';
+  const { browser, page } = await launch(launchOpts);
 
   try {
     // ── Navigate search page (with retry for Wanfang instability) ──

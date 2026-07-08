@@ -93,7 +93,7 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | 脚本 | 用途 | 关键参数 |
 |---|---|---|
 | `wf-cite.js` | 单篇引用 | `--q` `--type` `--idx` `--format gb7714\|mla\|apa` |
-| `wf-batch-cite.js` | 批量引用 | `--q` `--ids "0,2,5"` `--type` `--format gb7714|mla|apa` (CDP) |
+| `wf-batch-cite.js` | 批量引用 | `--q` `--ids "0,2,5"` `--type` `--mode launch|cdp` |
 
 ### Parallel — 并发
 
