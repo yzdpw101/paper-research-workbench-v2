@@ -92,16 +92,7 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       await page.waitForSelector('div.normal-list', { timeout: 15000 });
     }
 
-    // Select checkboxes — click labels directly (no clear, avoids Vue re-render racing)
-    await page.evaluate((ids) => {
-      const labels = document.querySelectorAll('div.normal-list label.ivu-checkbox-wrapper');
-      for (const id of ids) {
-        if (labels[id]) labels[id].click();
-      }
-    }, ids);
-    await new Promise(r => setTimeout(r, 1500));
-
-    // ── Snapshot download dirs before triggering ──
+    // ── Snapshot download dirs BEFORE any interaction ──
     let preFiles = new Set();
     try { preFiles = new Set(fs.readdirSync(saveDir)); } catch {}
     const cdpDlDir = getCDPDownloadDir();
@@ -110,9 +101,25 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       try { preCdpFiles = new Set(fs.readdirSync(cdpDlDir)); } catch {}
     }
 
+    // Select checkboxes — same logic as batch-cite
+    await page.evaluate(() => {
+      const clearBtn = document.querySelector('span.clear-btn');
+      if (clearBtn) clearBtn.click();
+    });
+    await new Promise(r => setTimeout(r, 800));
+
+    await page.evaluate((ids) => {
+      const labels = document.querySelectorAll('div.normal-list label.ivu-checkbox-wrapper');
+      for (const id of ids) {
+        if (labels[id]) labels[id].click();
+      }
+    }, ids);
+    await new Promise(r => setTimeout(r, 1000));
+
     // ── Click 批量下载 — opens new tab ──
     const ctx = browser.contexts()[0];
     const newPageP = ctx.waitForEvent('page', { timeout: 20000 });
+    await new Promise(r => setTimeout(r, 200));
     await page.evaluate(() => {
       const spans = document.querySelectorAll('span.export-btn');
       for (const s of spans) { if (s.innerText.trim() === '批量下载') { s.click(); break; } }
