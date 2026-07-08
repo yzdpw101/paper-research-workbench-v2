@@ -82,8 +82,8 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | `wf-chapter.js` | 万方学位论文分章下载（两步：`--action analyze` 查看树 → `--action download --ids "6,7"` 下载） | `--q` `--idx` `--ids` `--save-as` `--mode launch\|cdp` |
 | `ieee-figures.js` | IEEE 图表提取 | `--arnumber` `--out-dir`（先读 `ieee/figures.md`） |
 | `ieee-carsi-login.js` | IEEE CARSI SSO 登录 | `--port=9222`（仅 CDP 模式，直达 SSO 跳过 SeamlessAccess） |
-| `ieee-batch-cite.js` | IEEE 批量引用导出 | `--q` `--count`(≤10) `--format bibtex|plain|ris|refworks` `--save-as` `--mode launch|cdp` |
-| `ieee-batch-download.js` | IEEE 批量 PDF 下载（≤10篇，需登录） | `--q` `--count`(≤10) `--save-as` `--mode launch|cdp` |
+| `ieee-batch-cite.js` | IEEE 批量引用导出（不需登录） | `--q` `--count`(≤10) `--format bibtex\|plain\|ris\|refworks` `--save-as` `--mode launch\|cdp` |
+| `ieee-batch-download.js` | IEEE 批量 PDF 下载（需登录，≤10篇） | `--q` `--count`(≤10) `--save-as` `--mode launch\|cdp` |
 
 ### Core — 引用提取
 
