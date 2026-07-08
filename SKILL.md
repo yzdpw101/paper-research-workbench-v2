@@ -150,6 +150,8 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 > 批量连续运行多个脚本时加 `--no-kill`，避免互相杀掉浏览器进程。
 
+所有 launch 模式脚本支持 `--show` 参数关闭 headless，用于调试时观察浏览器行为：`node scripts/wf-download.js ... --show`
+
 ## 平台差异
 
 | | 万方 | IEEE |
