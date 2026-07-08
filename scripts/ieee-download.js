@@ -2,7 +2,7 @@
  * ieee-download.js — IEEE Xplore PDF download
  *
  * Usage:
- *   node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout <ms>] [--mode launch|cdp] [--browser chrome|firefox]
+ *   node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout <ms>] [--mode launch|cdp] [--browser chrome|firefox|msedge]|[--browser chrome|firefox|msedge]
  *
  * Only supports institutional network (IP authentication). No CARSI/login flow.
  */
@@ -28,7 +28,7 @@ const cdpPort = parseInt(opt('--cdp-port', '9222'));
 const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
 
 if (!arnumber) {
-  console.error('Usage: node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout <ms>] [--mode launch|cdp] [--browser chrome|firefox]');
+  console.error('Usage: node ieee-download.js --arnumber <n> [--save-as <path>] [--timeout <ms>] [--mode launch|cdp] [--browser chrome|firefox|msedge]|[--browser chrome|firefox|msedge]');
   process.exit(1);
 }
 

@@ -32,7 +32,7 @@ const cdpPort = parseInt(opt('--cdp-port', '9222'));
 const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
 
 if (!keyword) {
-  console.error('Usage: node wf-download.js --q <keyword> --type <paper|thesis|periodical|...> [--year 2025] [--idx 0] [--save-as <path>] [--mode launch|cdp] [--browser chrome|firefox]');
+  console.error('Usage: node wf-download.js --q <keyword> --type <paper|thesis|periodical|...> [--year 2025] [--idx 0] [--save-as <path>] [--mode launch|cdp] [--browser chrome|firefox|msedge]|[--browser chrome|firefox|msedge]');
   process.exit(1);
 }
 
