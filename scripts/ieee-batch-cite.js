@@ -141,6 +141,6 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
     try { browser.close(); } catch {}
     process.exit(0);
   } else {
-    await Promise.race([browser.close(), new Promise(r => setTimeout(r, 2000))]);
+    try { browser.close(); } catch {}; process.exit(0);
   }
 })();
