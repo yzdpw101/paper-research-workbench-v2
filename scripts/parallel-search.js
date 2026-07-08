@@ -357,7 +357,11 @@ async function main() {
   }
 
   // ── Launch browser and run batch ───────────────────────────────────────
-  const { browser } = await launch();
+  const dlMode = opt('--mode', 'launch');
+  const cdpPort = parseInt(opt('--cdp-port', '9222'));
+  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+  if (dlMode === 'cdp') launchOpts.browser = 'chrome';
+  const { browser } = await launch(launchOpts);
   const batchOptions = { browser };
   if (!isNaN(parallelArg) && parallelArg > 0) {
     batchOptions.parallel = parallelArg;
@@ -377,7 +381,8 @@ async function main() {
   };
 
   console.log(JSON.stringify(output, null, 2));
-  await browser.close();
+  if (dlMode === 'cdp') { try { browser.close(); } catch {}; setTimeout(() => process.exit(0), 3000); }
+  else { await browser.close(); }
 }
 
 // Run when executed directly
