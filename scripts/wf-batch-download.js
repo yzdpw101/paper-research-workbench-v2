@@ -102,8 +102,7 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       try { preCdpFiles = new Set(fs.readdirSync(cdpDlDir)); } catch {}
     }
 
-    // ── Click 批量下载 and capture new tab ──
-    const ctx = browser.contexts()[0];
+    // ── Click 批量下载 (opens modal, not new tab) ──
     const newPagePromise = ctx.waitForEvent('page', { timeout: 20000 });
     await new Promise(r => setTimeout(r, 200));
     await page.evaluate(() => {
