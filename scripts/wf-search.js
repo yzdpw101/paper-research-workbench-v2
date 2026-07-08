@@ -34,7 +34,23 @@ if (!keyword) {
   process.exit(1);
 }
 
-const url = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponent(keyword) + '&p=' + pageNum;
+// Map type to year facet field name and title
+const YEAR_FACET = {
+  paper: ['Year','年份'], periodical: ['Year','年份'], thesis: ['DegreeYear','学位年度'],
+  conference: ['ConferenceYear','会议年份'], patent: ['OpenYear','公开公告年份'],
+  cstad: ['IdentifyYear','鉴定年份'], standard: ['PublishYear','发布年份'],
+  claw: ['PublishYear','颁布年份']
+};
+
+let url = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponent(keyword) + '&p=' + pageNum;
+
+// Build year facet filter in URL (instead of clicking sidebar)
+if (yearFilter && YEAR_FACET[wfType]) {
+  const [field, title] = YEAR_FACET[wfType];
+  const years = yearFilter.split('-');
+  const facet = [{ [field]: { label: years, title, value: years } }];
+  url += '&facet=' + encodeURIComponent(JSON.stringify(facet));
+}
 
 (async () => {
   const headless = !process.argv.includes("--show");
@@ -44,33 +60,6 @@ const url = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponen
     timeout: parseInt(opt('--nav-timeout', '60000')),
     waitFor: 'div.normal-list'
   });
-
-  // Apply year filter: find correct panel by header, then click year label
-  if (yearFilter) {
-    const YEAR_LABELS = {
-      paper: '年份', periodical: '年份', thesis: '学位年度',
-      conference: '会议年份', patent: '公开公告年份', cstad: '鉴定年份',
-      standard: '发布年份', claw: '颁布年份', nstr: null
-    };
-    const label = YEAR_LABELS[wfType] || '年份';
-    if (label) {
-      await page.evaluate(({year, label}) => {
-        // Find the filter panel with matching header
-        const panels = document.querySelectorAll('[class*=facet], [class*=filter]');
-        for (const panel of panels) {
-          const header = panel.querySelector('[class*=title], [class*=header], h3, h4');
-          if (header && header.textContent.includes(label)) {
-            // Find year checkbox within this panel
-            const checkboxes = panel.querySelectorAll('label.ivu-checkbox-wrapper, [class*=option], [class*=item]');
-            for (const cb of checkboxes) {
-              if (cb.textContent.trim().startsWith(year)) { cb.click(); return; }
-            }
-          }
-        }
-      }, { year: yearFilter, label });
-      await new Promise(r => setTimeout(r, 2500));
-    }
-  }
 
   // Pagination: click through pages (Wanfang SPA ignores URL p= parameter)
   if (pageNum > 1) {
