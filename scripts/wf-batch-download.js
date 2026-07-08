@@ -82,9 +82,15 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
     : await browser.contexts()[0].newPage();
 
   try {
-    // ── Navigate search page ──
+    // ── Navigate search page (with retry for Wanfang instability) ──
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForSelector('div.normal-list', { timeout: 15000 });
+    try {
+      await page.waitForSelector('div.normal-list', { timeout: 15000 });
+    } catch {
+      // Retry once with refresh
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForSelector('div.normal-list', { timeout: 15000 });
+    }
 
     // ── Select checkboxes by --ids ──
     const cbs = page.locator('div.normal-list input.ivu-checkbox-input');
@@ -102,17 +108,26 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       try { preCdpFiles = new Set(fs.readdirSync(cdpDlDir)); } catch {}
     }
 
-    // ── Click 批量下载 (opens modal on same page, not new tab) ──
+    // ── Click 批量下载 — opens new tab ──
+    const ctx = browser.contexts()[0];
+    const newPageP = ctx.waitForEvent('page', { timeout: 20000 });
     await page.evaluate(() => {
       const spans = document.querySelectorAll('span.export-btn');
       for (const s of spans) { if (s.innerText.trim() === '批量下载') { s.click(); break; } }
     });
-    await new Promise(r => setTimeout(r, 3000));
+    const batchPage = await newPageP.catch(() => null);
+    if (!batchPage) {
+      console.log(JSON.stringify({ error: 'batch download page did not open' }, null, 2));
+      process.exit(0);
+    }
 
-    // Click 开始下载 in the modal
-    const startBtn = page.locator('button:has-text("开始下载"), span:has-text("开始下载"), a:has-text("开始下载")').first();
+    await batchPage.waitForLoadState('domcontentloaded');
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Click 开始下载 on the batch page
+    const startBtn = batchPage.locator('button:has-text("开始下载"), span:has-text("开始下载"), a:has-text("开始下载")').first();
     if (await startBtn.count() === 0) {
-      console.log(JSON.stringify({ error: 'modal did not open or 开始下载 not found' }, null, 2));
+      console.log(JSON.stringify({ error: '开始下载 not found on batch page' }, null, 2));
       process.exit(0);
     }
     await startBtn.click({ force: true });

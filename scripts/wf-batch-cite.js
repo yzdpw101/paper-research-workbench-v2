@@ -51,9 +51,14 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
     : await browser.contexts()[0].newPage();
 
   try {
-    // ── Navigate search page ──
+    // ── Navigate search page (with retry for Wanfang instability) ──
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForSelector('div.normal-list', { timeout: 15000 });
+    try {
+      await page.waitForSelector('div.normal-list', { timeout: 15000 });
+    } catch {
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForSelector('div.normal-list', { timeout: 15000 });
+    }
 
     // Batch citation extraction requires CARSI login
     const loginStatus = await checkStatus(page);
