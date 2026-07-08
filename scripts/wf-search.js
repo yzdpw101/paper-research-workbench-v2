@@ -141,9 +141,10 @@ if (yearFilter && YEAR_FACET[wfType]) {
     const perPage = perPageM ? parseInt(perPageM[1]) : 20;
     const totalPages = Math.ceil(totalResults / perPage);
     const hdr = '找到' + totalResults + '条  p' + currentPage + '/' + totalPages + '  每页' + perPage + '条';
-    const list = items.slice(0, 20).map((x, i) => '#' + (i + 1) + '  ' + (x.type || '-') + '  ' + dl(x) + '  ' + x.title).join('\n');
-    return { page: currentPage, totalResults, totalPages, perPage, items: items.slice(0, 20), activeFilters, display: hdr + '\n' + list };
-  }, { noSnippet });
+    const limit = Math.min(opts.rows, items.length);
+    const list = items.slice(0, limit).map((x, i) => '#' + (i + 1) + '  ' + (x.type || '-') + '  ' + dl(x) + '  ' + x.title).join('\n');
+    return { page: currentPage, totalResults, totalPages, perPage, items: items.slice(0, limit), activeFilters, display: hdr + '\n' + list };
+  }, { noSnippet, rows });
 
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
