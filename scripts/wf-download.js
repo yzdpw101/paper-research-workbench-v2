@@ -24,6 +24,7 @@ const keyword = opt('--q', '');
 const wfType = opt('--type', 'paper');
 const targetIdx = parseInt(opt('--idx', '0'));
 const pageNum = opt('--page', '1');
+const yearFilter = opt('--year', '');
 const saveAsPath = opt('--save-as', '');
 const dlMode = opt('--mode', 'launch');
 const dlTimeout = parseInt(opt('--timeout', dlMode === 'cdp' ? '120000' : '120000'));
@@ -31,11 +32,23 @@ const cdpPort = parseInt(opt('--cdp-port', '9222'));
 const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
 
 if (!keyword) {
-  console.error('Usage: node wf-download.js --q <keyword> --type <paper|thesis|periodical|...> [--idx 0] [--save-as <path>] [--mode launch|cdp] [--browser chrome|firefox]');
+  console.error('Usage: node wf-download.js --q <keyword> --type <paper|thesis|periodical|...> [--year 2025] [--idx 0] [--save-as <path>] [--mode launch|cdp] [--browser chrome|firefox]');
   process.exit(1);
 }
 
-const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponent(keyword) + '&p=' + pageNum;
+const YEAR_FACET = {
+  paper: ['Year','年份'], periodical: ['Year','年份'], thesis: ['DegreeYear','学位年度'],
+  conference: ['ConferenceYear','会议年份'], patent: ['OpenYear','公开公告年份'],
+  standard: ['PublishYear','发布年份']
+};
+
+let searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponent(keyword) + '&p=' + pageNum;
+if (yearFilter && YEAR_FACET[wfType]) {
+  const [field, title] = YEAR_FACET[wfType];
+  const years = yearFilter.split('-');
+  const facet = [{ [field]: { label: years, title, value: years } }];
+  searchUrl += '&facet=' + encodeURIComponent(JSON.stringify(facet));
+}
 const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
 (async () => {

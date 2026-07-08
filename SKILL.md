@@ -77,8 +77,8 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | `wf-detail.js` | 万方详情页元数据提取 | `--url` `--mode launch|cdp` |
 | `ieee-search.js` | IEEE 搜索 | `--q` `--type` `--year` `--rows`(≤25) `--page` `--no-snippet` |
 | `ieee-detail.js` | IEEE 论文元数据 | `--arnumber`（作者、DOI、引用等） |
-| `wf-download.js` | 万方下载 | `--q` `--type` `--idx` `--save-as` `--mode launch\|cdp` `--browser` |
-| `ieee-download.js` | IEEE PDF 下载 | `--arnumber` `--save-as` `--mode launch\|cdp` `--browser` |
+| `wf-download.js` | 万方下载 | `--q` `--type` `--year` `--idx` `--save-as` `--mode launch|cdp` `--browser` |\|cdp` `--browser` |
+| `ieee-download.js` | IEEE PDF 下载 | `--arnumber` `--save-as` `--mode launch\|| `wf-download.js` | 万方下载 | `--q` `--type` `--year` `--idx` `--save-as` `--mode launch|cdp` `--browser` |
 | `wf-carsi-login.js` | 万方 CARSI SSO | `--port=9222`（仅 CDP 模式） |
 | `wf-chapter.js` | 万方学位论文分章下载（两步：`--action analyze` 查看树 → `--action download --ids "6,7"` 下载） | `--q` `--idx` `--ids` `--save-as` `--mode launch\|cdp` |
 | `ieee-figures.js` | IEEE 图表提取 | `--arnumber` `--out-dir`（先读 `ieee/figures.md`） |
