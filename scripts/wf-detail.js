@@ -65,8 +65,9 @@ if (!url) {
 
       // Common fields across all types
       const patterns = [
-        // Title: appears after breadcrumb "> xxx > xxx >"
-        ['title', /(?:首页|期刊导航|登录|注册)[\s\S]*?>\s*(?:[^>]+?>\s*)*?(.+?)(?:\s*\n\s*(?:DOI|在线阅读|刘|张|王|李|赵|陈|杨|周|摘要|Abstract))/s, 1],
+        // Title: appears after breadcrumb "> xxx > xxx >" — take the last segment
+        ['title', /(?:首页|期刊导航|学位导航|会议导航|专利导航|科技报告导航|成果导航|标准导航|法规导航)[\s\S]*?>\s*(.+?)(?:\s*\n\s*(?:DOI|在线阅读|摘要|作者|刘|张|王|李|赵|陈|杨|周))/s, 1],
+        // Clean breadcrumb: keep only the paper name
         ['title', /DOI[：:]\s*\S+\s*\n\s*([^\n]+)/, 1], // title on next line after DOI
         // DOI
         ['doi', /DOI[：:]\s*(10\.\S+)/, 1],
@@ -158,6 +159,14 @@ if (!url) {
       else if (href.includes('/cstad/')) resourceType = 'cstad';
       else if (href.includes('/standard/')) resourceType = 'standard';
       else if (href.includes('/claw/')) resourceType = 'claw';
+
+      // Clean title: remove breadcrumb prefix, keep only the paper name
+      let title = fields.title || '';
+      if (title.includes(' > ')) {
+        const parts = title.split(' > ');
+        title = parts[parts.length - 1].split('\n')[0].trim();
+      }
+      fields.title = title;
 
       return {
         url: href,
