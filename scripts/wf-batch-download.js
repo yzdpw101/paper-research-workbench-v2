@@ -134,5 +134,5 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
   }
 
   if (dlMode === 'cdp') { try { browser.close(); } catch {}; process.exit(0); }
-  else { console.log(JSON.stringify(r, null, 2)); try { browser.close(); } catch {}; process.exit(0); }
+  else { try { browser.close(); } catch {}; process.exit(0); }
 })();
