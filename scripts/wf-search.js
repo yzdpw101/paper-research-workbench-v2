@@ -36,7 +36,8 @@ if (!keyword) {
 const url = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponent(keyword) + '&p=' + pageNum;
 
 (async () => {
-  const { browser, page } = await launch({ headless: true });
+  const headless = !process.argv.includes("--show");
+  const { browser, page } = await launch({ headless });
 
   await goto(page, url, {
     timeout: parseInt(opt('--nav-timeout', '60000')),

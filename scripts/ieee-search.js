@@ -42,7 +42,8 @@ if (year) { const parts = year.split('-'); url += '&ranges=' + parts[0] + '_' + 
 url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
 
 (async () => {
-  const { browser, page } = await launch({ headless: true });
+  const headless = !process.argv.includes("--show");
+  const { browser, page } = await launch({ headless });
 
   await goto(page, url, {
     timeout: parseInt(opt('--nav-timeout', '60000')),

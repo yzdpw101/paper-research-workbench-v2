@@ -359,7 +359,8 @@ async function main() {
   // ── Launch browser and run batch ───────────────────────────────────────
   const dlMode = opt('--mode', 'launch');
   const cdpPort = parseInt(opt('--cdp-port', '9222'));
-  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+const headless = !process.argv.includes("--show");
+  const launchOpts = { headless, mode: dlMode, port: cdpPort };
   if (dlMode === 'cdp') launchOpts.browser = 'chrome';
   const { browser } = await launch(launchOpts);
   const batchOptions = { browser };

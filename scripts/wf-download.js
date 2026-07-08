@@ -40,7 +40,8 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
 (async () => {
   fs.mkdirSync(downloadDir, { recursive: true });
-  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+const headless = !process.argv.includes("--show");
+  const launchOpts = { headless, mode: dlMode, port: cdpPort };
   if (browserType) launchOpts.browser = browserType;
   const { browser, context, page } = await launch(launchOpts);
 

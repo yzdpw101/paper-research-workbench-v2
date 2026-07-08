@@ -24,7 +24,8 @@ if (!arnumber) {
 }
 
 (async () => {
-  const { browser, page } = await launch({ headless: true });
+  const headless = !process.argv.includes("--show");
+  const { browser, page } = await launch({ headless });
 
   const detailUrl = 'https://ieeexplore.ieee.org/document/' + arnumber + '/';
   await goto(page, detailUrl, { timeout: 60000, waitFor: 'h1' });
