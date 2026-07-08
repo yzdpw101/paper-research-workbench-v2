@@ -92,22 +92,14 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       await page.waitForSelector('div.normal-list', { timeout: 15000 });
     }
 
-    // Clear and select — use label click instead of JS checked to avoid Vue reactivity issues
-    await page.evaluate((ids) => {
-      // Click clear button first
-      const clearBtn = document.querySelector('span.clear-btn');
-      if (clearBtn) clearBtn.click();
-    });
-    await new Promise(r => setTimeout(r, 800));
-
-    // Click checkbox labels by id
+    // Select checkboxes — click labels directly (no clear, avoids Vue re-render racing)
     await page.evaluate((ids) => {
       const labels = document.querySelectorAll('div.normal-list label.ivu-checkbox-wrapper');
       for (const id of ids) {
         if (labels[id]) labels[id].click();
       }
     }, ids);
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1500));
 
     // ── Snapshot download dirs before triggering ──
     let preFiles = new Set();
