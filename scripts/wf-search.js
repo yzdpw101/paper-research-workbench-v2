@@ -26,6 +26,7 @@ const keyword = opt('--q', '');
 const wfType = opt('--type', 'paper');
 const pageNum = opt('--page', '1');
 const rows = Math.min(parseInt(opt('--rows', '20')), 20);
+const yearFilter = opt('--year', '');
 const noSnippet = process.argv.includes('--no-snippet');
 
 if (!keyword) {
@@ -43,6 +44,33 @@ const url = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponen
     timeout: parseInt(opt('--nav-timeout', '60000')),
     waitFor: 'div.normal-list'
   });
+
+  // Apply year filter: find correct panel by header, then click year label
+  if (yearFilter) {
+    const YEAR_LABELS = {
+      paper: '年份', periodical: '年份', thesis: '学位年度',
+      conference: '会议年份', patent: '公开公告年份', cstad: '鉴定年份',
+      standard: '发布年份', claw: '颁布年份', nstr: null
+    };
+    const label = YEAR_LABELS[wfType] || '年份';
+    if (label) {
+      await page.evaluate(({year, label}) => {
+        // Find the filter panel with matching header
+        const panels = document.querySelectorAll('[class*=facet], [class*=filter]');
+        for (const panel of panels) {
+          const header = panel.querySelector('[class*=title], [class*=header], h3, h4');
+          if (header && header.textContent.includes(label)) {
+            // Find year checkbox within this panel
+            const checkboxes = panel.querySelectorAll('label.ivu-checkbox-wrapper, [class*=option], [class*=item]');
+            for (const cb of checkboxes) {
+              if (cb.textContent.trim().startsWith(year)) { cb.click(); return; }
+            }
+          }
+        }
+      }, { year: yearFilter, label });
+      await new Promise(r => setTimeout(r, 2500));
+    }
+  }
 
   // Pagination: click through pages (Wanfang SPA ignores URL p= parameter)
   if (pageNum > 1) {

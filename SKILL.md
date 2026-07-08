@@ -73,9 +73,9 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 | 脚本 | 用途 | 关键参数 |
 |---|---|---|
-| `wf-search.js` | 万方搜索 | `--q` `--type` `--page` `--rows`(≤20) `--no-snippet` |
+| `wf-search.js` | 万方搜索 | `--q` `--type` `--year` `--page` `--rows`(≤20) `--no-snippet` |
 | `wf-detail.js` | 万方详情页元数据提取 | `--url` `--mode launch|cdp` |
-| `ieee-search.js` | IEEE 搜索 | `--q` `--type` `--year` `--rows`(≤25) `--page` `--expand` |
+| `ieee-search.js` | IEEE 搜索 | `--q` `--type` `--year` `--rows`(≤25) `--page` `--no-snippet` |
 | `ieee-detail.js` | IEEE 论文元数据 | `--arnumber`（作者、DOI、引用等） |
 | `wf-download.js` | 万方下载 | `--q` `--type` `--idx` `--save-as` `--mode launch\|cdp` `--browser` |
 | `ieee-download.js` | IEEE PDF 下载 | `--arnumber` `--save-as` `--mode launch\|cdp` `--browser` |

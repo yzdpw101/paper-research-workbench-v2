@@ -3,14 +3,14 @@
  *
  * Usage:
  *   node ieee-search.js --q <keyword> [--type <type>] [--year <YYYY-YYYY>]
- *                       [--rows <n>] [--page <n>] [--expand]
+ *                       [--rows <n>] [--page <n>] [--no-snippet]
  *
  * --q       : Search keyword (required)
  * --type    : Journals|Conferences|Magazines|Books|Early Access Articles|Standards
  * --year    : Year range, e.g. "2023-2025" or "2024"
  * --rows    : Results per page, default 25 (max 25)
  * --page    : Page number, default 1
- * --expand  : Expand abstracts; each item gets a .snippet field
+ * --no-snippet : Omit abstracts from results (smaller output)
  *
  * Browser: launch mode (headless), default Firefox. PAPER_BROWSER_DEFAULT env to switch.
  * No login — search works without authentication on any network.
@@ -29,10 +29,10 @@ const type = opt('--type', '');
 const year = opt('--year', '');
 const rows = Math.min(parseInt(opt('--rows', '25')), 25);
 const pageNum = opt('--page', '1');
-const expand = process.argv.includes('--expand');
+const noSnippet = process.argv.includes('--no-snippet');
 
 if (!keyword) {
-  console.error('Usage: node ieee-search.js --q <keyword> [--type Journals] [--year 2023-2025] [--rows 25] [--page 1] [--expand]');
+  console.error('Usage: node ieee-search.js --q <keyword> [--type Journals] [--year 2023-2025] [--rows 25] [--page 1] [--no-snippet]');
   process.exit(1);
 }
 
@@ -51,7 +51,7 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
   });
 
   // Expand all abstracts if requested
-  if (expand) {
+  if (!noSnippet) {
     await page.evaluate(() => {
       document.querySelectorAll('.abstract-control').forEach(c => {
         if (c.querySelector('.fa-angle-down')) c.click();
@@ -75,7 +75,7 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
       if (m && title && !seen.has(m[1])) {
         seen.add(m[1]);
         const item = { arnumber: m[1], title, url: a.href };
-        if (opts.expand) {
+        if (!opts.noSnippet) {
           const idx = body.indexOf(title);
           item.snippet = idx >= 0 ? body.slice(idx + title.length, idx + title.length + 400) : '';
         }
@@ -93,7 +93,7 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
       items: out.slice(0, 20),
       display: 'Showing ' + out.length + ' of ' + totalResults + '  p' + (new URL(location.href).searchParams.get('pageNumber') || '1') + '/' + totalPages + '  ' + perPage + ' rows/page\n' + list
     };
-  }, { expand });
+  }, { noSnippet });
 
   console.log(JSON.stringify(result, null, 2));
   await browser.close();
