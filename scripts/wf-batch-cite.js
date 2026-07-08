@@ -69,18 +69,20 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
     }
 
 
-    // Clear any previous selections
-    try { await page.locator("span.clear-btn").first().click({ force: true, timeout: 3000 }); } catch {}
-    await new Promise(r => setTimeout(r, 500));
-
-    // ── Select checkboxes by --ids (force click — inputs are CSS-hidden) ──
-    const cbs = page.locator('div.normal-list input.ivu-checkbox-input');
-    for (const id of ids) {
-      if (await cbs.nth(id).count() > 0) {
-        await cbs.nth(id).click({ force: true });
-        await new Promise(r => setTimeout(r, 300));
+    // Clear and select via JS to bypass Vue SPA async issues
+    await page.evaluate((ids) => {
+      document.querySelectorAll('div.normal-list input.ivu-checkbox-input').forEach(cb => {
+        cb.checked = false;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      const cbs = document.querySelectorAll('div.normal-list input.ivu-checkbox-input');
+      for (const id of ids) {
+        if (cbs[id]) {
+          cbs[id].checked = true;
+          cbs[id].dispatchEvent(new Event('change', { bubbles: true }));
+        }
       }
-    }
+    }, ids);
     await new Promise(r => setTimeout(r, 1000));
 
     // ── Click 批量引用 and capture new tab ──
