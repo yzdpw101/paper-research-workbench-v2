@@ -25,6 +25,7 @@ const saveAsPath = opt('--save-as', '');
 const dlMode = opt('--mode', 'launch');
 const cdpPort = parseInt(opt('--cdp-port', '9222'));
 const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
+const headless = !process.argv.includes('--show');
 
 if (!keyword) {
   console.error('Usage: node ieee-batch-download.js --q <keyword> [--count 3] [--save-as <path>] [--mode launch|cdp]');
@@ -36,7 +37,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
 (async () => {
   fs.mkdirSync(downloadDir, { recursive: true });
-  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+  const launchOpts = { headless, mode: dlMode, port: cdpPort };
   if (browserType) launchOpts.browser = browserType;
   const { browser, page } = await launch(launchOpts);
 
