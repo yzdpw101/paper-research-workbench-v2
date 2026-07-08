@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 const DEFAULTS = Object.freeze({
   version: 2,
   browser: {
-    default: 'firefox',
+    default: 'chrome',
     cdpPort: 9222,
   },
   navigation: {

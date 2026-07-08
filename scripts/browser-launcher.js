@@ -82,7 +82,7 @@ function defaultUserDataDir(browserName) {
  * @returns {string} Browser name: 'firefox', 'chrome', or 'msedge'
  */
 export function resolveBrowser() {
-  return get('browser.default') || 'firefox';
+  return get('browser.default') || 'chrome';
 }
 
 /**

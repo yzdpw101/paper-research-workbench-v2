@@ -144,9 +144,9 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 | 场景 | 浏览器 | 原因 |
 |---|---|---|
-| 搜索（万方 + IEEE） | Firefox headless | Chrome headless 容易被万方屏蔽返回空白页；Firefox headless 指纹更友好 |
-| 下载（机构网络） | Firefox headless 或 Chrome | IP 认证下网站不区分浏览器 |
-| 下载（非机构网络） | Chrome CDP | 连接桌面 Chrome 以共享真实浏览器指纹和登录状态 |
+| 搜索（万方 + IEEE） | Chrome headless | Chrome headless，万方可能需自动刷新 |
+| 下载（机构网络） | Chrome headless | IP 认证下网站不区分浏览器 |
+| 下载（非机构网络） | Chrome CDP | 连接桌面 Chrome 共享真实浏览器指纹和登录状态 |
 | CARSI 登录 | Chrome CDP | 仅 CDP 模式；Firefox 不支持 CDP |
 
 > 批量连续运行多个脚本时加 `--no-kill`，避免互相杀掉浏览器进程。

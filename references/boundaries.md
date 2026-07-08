@@ -7,7 +7,7 @@
 | 机构网络（校园网/VPN） | Firefox / Chrome | ✅ headless | ✅ 直接下载 | 不需要 |
 | 非机构网络 | Chrome CDP | ✅ CDP | ✅ 需 CARSI | `wf-carsi-login.js` |
 
-> 非机构网络下 Firefox 不支持（无法 CDP 共享登录态）。
+> 非机构网络需 Chrome CDP。
 
 ### CARSI 登录适用范围
 
