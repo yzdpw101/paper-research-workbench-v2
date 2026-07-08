@@ -42,15 +42,19 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
   const { browser, page } = await launch(launchOpts);
 
   try {
-    await goto(page, searchUrl, { timeout: 60000, waitFor: '.results-actions-selectall' });
+    await goto(page, searchUrl, { timeout: 30000, waitFor: '.results-actions-selectall' });
     await new Promise(r => setTimeout(r, 3000));
 
-    // Dismiss cookie/privacy popup if present (blocks download buttons)
+    // Dismiss cookie/privacy popup if present (blocks download buttons in headless mode)
     try {
-      const acceptBtn = page.locator('button:has-text("Accept All"), a:has-text("Accept All")').first();
-      if (await acceptBtn.count() > 0) {
-        await acceptBtn.click({ force: true, timeout: 5000 });
-        await new Promise(r => setTimeout(r, 1000));
+      // Try multiple possible selectors for the accept button
+      for (const sel of ['button:has-text("Accept All")', 'a:has-text("Accept All")', 'button:has-text("Accept")', '.osano-cm-accept']) {
+        const btn = page.locator(sel).first();
+        if (await btn.count() > 0) {
+          await btn.click({ force: true, timeout: 3000 });
+          await new Promise(r => setTimeout(r, 1500));
+          break;
+        }
       }
     } catch { /* popup may not exist */ }
 
@@ -101,7 +105,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
       }
     }
     // Launch mode: wait for download promise
-    if (dlPromise) { const r = await Promise.race([dlPromise, new Promise(res => setTimeout(() => res({ status: "error", error: "download event not captured — file may be in browser default dir" }), 60000))]);
+    if (dlPromise) { const r = await Promise.race([dlPromise, new Promise(res => setTimeout(() => res({ status: "error", error: "download event not captured — file may be in browser default dir" }), 30000))]);
       console.log(JSON.stringify(r, null, 2));
     }
   } catch (e) {

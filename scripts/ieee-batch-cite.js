@@ -41,7 +41,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
   const { browser, page } = await launch(launchOpts);
 
   try {
-    await goto(page, searchUrl, { timeout: 60000, waitFor: '.results-actions-selectall' });
+    await goto(page, searchUrl, { timeout: 30000, waitFor: '.results-actions-selectall' });
     await new Promise(r => setTimeout(r, 3000));
 
     // Dismiss cookie/privacy popup if present
@@ -103,7 +103,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
       const cdpDir = getCDPDownloadDir(browserType || 'chrome');
       const dirs = [downloadDir];
       if (cdpDir && cdpDir !== downloadDir) dirs.push(cdpDir);
-      const txtPath = await waitForTxt(dirs, startTime, 60000);
+      const txtPath = await waitForTxt(dirs, startTime, 30000);
       if (txtPath) {
         const filename = path.basename(txtPath);
         const dest = saveAsPath || path.join(downloadDir, filename);
@@ -116,7 +116,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
       }
     }
     // Launch mode: wait for download promise
-    if (dlPromise) { const r = await Promise.race([dlPromise, new Promise(res => setTimeout(() => res({ status: "error", error: "download event not captured" }), 60000))]);
+    if (dlPromise) { const r = await Promise.race([dlPromise, new Promise(res => setTimeout(() => res({ status: "error", error: "download event not captured" }), 30000))]);
       console.log(JSON.stringify(r, null, 2));
     }
   } catch (e) {
