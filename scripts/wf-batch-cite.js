@@ -70,11 +70,16 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
 
 
     // Clear any previous selections
-    try { await page.locator("span.clear-btn").first().click({ force: true, timeout: 3000 }); await new Promise(r => setTimeout(r, 300)); } catch {}
+    try { await page.locator("span.clear-btn").first().click({ force: true, timeout: 3000 }); } catch {}
+    await new Promise(r => setTimeout(r, 500));
+
     // ── Select checkboxes by --ids (force click — inputs are CSS-hidden) ──
     const cbs = page.locator('div.normal-list input.ivu-checkbox-input');
     for (const id of ids) {
-      if (await cbs.nth(id).count() > 0) await cbs.nth(id).click({ force: true });
+      if (await cbs.nth(id).count() > 0) {
+        await cbs.nth(id).click({ force: true });
+        await new Promise(r => setTimeout(r, 300));
+      }
     }
     await new Promise(r => setTimeout(r, 1000));
 

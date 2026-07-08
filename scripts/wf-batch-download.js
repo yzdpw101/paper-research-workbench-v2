@@ -93,11 +93,16 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
     }
 
     // Clear any previous selections
-    try { await page.locator("span.clear-btn").first().click({ force: true, timeout: 3000 }); await new Promise(r => setTimeout(r, 300)); } catch {}
+    try { await page.locator("span.clear-btn").first().click({ force: true, timeout: 3000 }); } catch {}
+    await new Promise(r => setTimeout(r, 500));
+
     // ── Select checkboxes by --ids ──
     const cbs = page.locator('div.normal-list input.ivu-checkbox-input');
     for (const id of ids) {
-      if (await cbs.nth(id).count() > 0) await cbs.nth(id).click({ force: true });
+      if (await cbs.nth(id).count() > 0) {
+        await cbs.nth(id).click({ force: true });
+        await new Promise(r => setTimeout(r, 300)); // let SPA settle between clicks
+      }
     }
     await new Promise(r => setTimeout(r, 1000));
 
