@@ -1,6 +1,15 @@
 # First-time Setup (v2)
 
-检查 `.state/.setup-done` 是否存在。存在 → 跳过。不存在 → 按以下步骤引导，完成后创建该文件。
+首次使用时按以下步骤引导。已设置则跳过（检查 `.state/.setup-done`）。
+
+## 浏览器选择
+
+首次运行时会询问浏览器偏好：
+
+1. **Chrome / Edge**（推荐）— launch 和 CDP 模式全支持，机构和非机构网络均可使用
+2. **Firefox** — 仅支持机构网络。非机构网络无法 CARSI 登录和下载
+
+若选 Firefox，需告知用户：`⚠️ Firefox 仅支持校园网/VPN 环境，非机构网络下无法登录和下载。`
 
 ## Quick start (recommended)
 
