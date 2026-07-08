@@ -49,10 +49,13 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
     // Dismiss cookie/privacy popup if present
     try {
-      const acceptBtn = page.locator("button:has-text(\\"Accept All\\"), a:has-text(\\"Accept All\\")").first();
-      if (await acceptBtn.count() > 0) {
-        await acceptBtn.click({ force: true, timeout: 5000 });
-        await new Promise(r => setTimeout(r, 1000));
+      for (const sel of ['button:has-text("Accept All")', 'a:has-text("Accept All")', 'button:has-text("Accept")', '.osano-cm-accept']) {
+        const btn = page.locator(sel).first();
+        if (await btn.count() > 0) {
+          await btn.click({ force: true, timeout: 3000 });
+          await new Promise(r => setTimeout(r, 1500));
+          break;
+        }
       }
     } catch { /* popup may not exist */ }
 
@@ -134,8 +137,8 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
   try { await page.evaluate(() => { document.querySelectorAll('ngb-modal-window .close, .modal .close, [aria-label=Close]').forEach(b => b.click()); }); } catch {}
   if (dlMode === 'cdp') {
     try { browser.close(); } catch {}
-    setTimeout(() => process.exit(0), 3000);
+    process.exit(0);
   } else {
-    await Promise.race([browser.close(), new Promise(r => setTimeout(r, 5000))]);
+    await Promise.race([browser.close(), new Promise(r => setTimeout(r, 2000))]);
   }
 })();

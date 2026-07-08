@@ -93,7 +93,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
     // Click Download in confirmation modal (use modal-scoped locator)
     const confirmModal = page.locator('ngb-modal-window.d-block, .modal.show').first();
     const dlBtn = confirmModal.locator('button:has-text("Download"):not(:has-text("PDFs"))').last();
-    if (await dlBtn.count() > 0) await dlBtn.click({ force: true, timeout: 5000 });
+    if (await dlBtn.count() > 0) await dlBtn.click({ force: true, timeout: 2000 });
     await new Promise(r => setTimeout(r, 1000));
 
     // CDP mode: poll for .zip
@@ -108,7 +108,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
         const dd = path.dirname(dest);
         if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
         if (zipPath !== dest) fs.copyFileSync(zipPath, dest);
-        console.log(JSON.stringify({ status: 'ok', download: { name: filename, path: dest, size: fs.statSync(dest).size, count } }, null, 2));
+        console.log(JSON.stringify({ status: 'ok', download: { name: filename, path: dest, size: fs.statSync(dest).size, ids: ids.length } }, null, 2));
       } else {
         console.log(JSON.stringify({ status: 'error', error: 'ZIP not found' }, null, 2));
       }
@@ -125,8 +125,8 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
   try { await page.evaluate(() => { document.querySelectorAll('ngb-modal-window .close, .modal .close, [aria-label=Close]').forEach(b => b.click()); }); } catch {}
   if (dlMode === 'cdp') {
     try { browser.close(); } catch {}
-    setTimeout(() => process.exit(0), 3000);
+    process.exit(0);
   } else {
-    await Promise.race([browser.close(), new Promise(r => setTimeout(r, 5000))]);
+    await Promise.race([browser.close(), new Promise(r => setTimeout(r, 2000))]);
   }
 })();
