@@ -162,7 +162,7 @@ async function getNodeList(chPage) {
       let dlResolve;
       const dlPromise = dlMode !== 'cdp' ? new Promise(resolve => {
         dlResolve = resolve;
-        chPage.on('download', async (dl) => {
+        const onDownload = async (dl) => {
           const dest = saveAsPath || path.join(downloadDir, dl.suggestedFilename());
           const dd = path.dirname(dest);
           if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
@@ -172,11 +172,14 @@ async function getNodeList(chPage) {
             await new Promise((res, rej) => { stream.pipe(ws); ws.on('finish', res); ws.on('error', rej); stream.on('error', rej); });
           } catch (_) { await dl.saveAs(dest); }
           resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size } });
-        });
+        };
+        // Bind to all pages — download event may fire on any page in the context
+        for (const p of context.pages()) p.on('download', onDownload);
+        context.on('page', p => p.on('download', onDownload));
       }) : null;
 
       // Click confirm
-      await chPage.evaluate(() => { const btns = document.querySelectorAll("button"); for (const b of btns) { if (b.textContent.includes("确认下载")) { b.click(); break; } } });
+      await chPage.locator('button:has-text("确认下载")').first().click();
 
       // Wait for ZIP
       if (dlMode === 'cdp') {
