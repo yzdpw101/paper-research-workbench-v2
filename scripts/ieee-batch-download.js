@@ -43,7 +43,16 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
   try {
     await goto(page, searchUrl, { timeout: 60000, waitFor: '.results-actions-selectall' });
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Dismiss cookie/privacy popup if present (blocks download buttons)
+    try {
+      const acceptBtn = page.locator('button:has-text("Accept All"), a:has-text("Accept All")').first();
+      if (await acceptBtn.count() > 0) {
+        await acceptBtn.click({ force: true, timeout: 5000 });
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    } catch { /* popup may not exist */ }
 
     // Select results
     await page.locator('label.results-actions-selectall').first().click();
@@ -105,6 +114,6 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
     try { browser.close(); } catch {}
     setTimeout(() => process.exit(0), 3000);
   } else {
-    await browser.close();
+    await Promise.race([browser.close(), new Promise(r => setTimeout(r, 5000))]);
   }
 })();
