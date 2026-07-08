@@ -140,14 +140,14 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 ## 浏览器策略
 
-不同平台对不同浏览器的接受程度不同，这是从实测中总结的选择逻辑：
+默认使用 Chrome headless（Playwright 自带 Chromium）。做过反检测处理：伪装 Firefox UA + 移除 webdriver 标记 + 去掉自动化控制提示。万方和 IEEE 均能正常访问。
 
 | 场景 | 浏览器 | 原因 |
 |---|---|---|
-| 搜索（万方 + IEEE） | Chrome headless | Chrome headless，万方可能需自动刷新 |
+| 搜索（万方 + IEEE） | Chrome headless | 默认，反检测后可正常加载 |
 | 下载（机构网络） | Chrome headless | IP 认证下网站不区分浏览器 |
 | 下载（非机构网络） | Chrome CDP | 连接桌面 Chrome 共享真实浏览器指纹和登录状态 |
-| CARSI 登录 | Chrome CDP | 仅 CDP 模式；Firefox 不支持 CDP |
+| CARSI 登录 | Chrome CDP | 仅 CDP 模式 |
 
 > 批量连续运行多个脚本时加 `--no-kill`，避免互相杀掉浏览器进程。
 
