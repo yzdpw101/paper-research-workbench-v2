@@ -102,43 +102,21 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       try { preCdpFiles = new Set(fs.readdirSync(cdpDlDir)); } catch {}
     }
 
-    // ── Click 批量下载 (opens modal, not new tab) ──
-    const newPagePromise = ctx.waitForEvent('page', { timeout: 20000 });
-    await new Promise(r => setTimeout(r, 200));
+    // ── Click 批量下载 (opens modal on same page, not new tab) ──
     await page.evaluate(() => {
       const spans = document.querySelectorAll('span.export-btn');
       for (const s of spans) { if (s.innerText.trim() === '批量下载') { s.click(); break; } }
     });
-    const dlTab = await newPagePromise.catch(() => null);
-    if (!dlTab) {
-      console.log(JSON.stringify({ error: 'batch download tab not opened' }, null, 2));
-      process.exit(0);
-    }
-
-    await dlTab.waitForLoadState('domcontentloaded');
     await new Promise(r => setTimeout(r, 3000));
 
-    // ── Check for error popup (thesis not supported) ──
-    const popupText = await dlTab.evaluate(() => {
-      // Check for iView modal with error message
-      const modal = document.querySelector('.ivu-modal-body, .ivu-message-notice');
-      return modal ? modal.textContent.trim() : '';
-    });
-    if (popupText.includes('不满足') || popupText.includes('批量下载条件')) {
-      console.log(JSON.stringify({ error: popupText }, null, 2));
-      await dlTab.close();
-      process.exit(0);
-    }
-
-    // ── Click 开始下载 ──
-    const startBtn = dlTab.locator('span, button, a', { hasText: '开始下载' }).first();
+    // Click 开始下载 in the modal
+    const startBtn = page.locator('button:has-text("开始下载"), span:has-text("开始下载"), a:has-text("开始下载")').first();
     if (await startBtn.count() === 0) {
-      console.log(JSON.stringify({ error: '开始下载 button not found' }, null, 2));
-      await dlTab.close();
+      console.log(JSON.stringify({ error: 'modal did not open or 开始下载 not found' }, null, 2));
       process.exit(0);
     }
     await startBtn.click({ force: true });
-    console.log('[batch-dl] Download started, waiting for file...');
+    await new Promise(r => setTimeout(r, 1000));
 
     // ── Poll for download ──
     const polls = [pollDownloadDir(saveDir, preFiles, 120000)];
@@ -162,7 +140,7 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
       console.log(JSON.stringify({ error: 'download timeout' }, null, 2));
     }
 
-    await dlTab.close();
+
     process.exit(0);
 
   } catch (err) {
