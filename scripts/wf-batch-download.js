@@ -30,14 +30,18 @@ function opt(name, def) {
 
 const keyword = opt('--q', '');
 const wfType = opt('--type', 'periodical');
-const count = Math.min(parseInt(opt('--count', '3')), 10);
+const idsArg = opt('--ids', '');
 const saveDir = path.resolve(opt('--save-dir', '.state/downloads'));
 const cdpPort = parseInt(opt('--port', '9222'));
 
-if (!keyword) {
-  console.error('Usage: node wf-batch-download.js --q <keyword> [--type periodical] [--count 3] [--save-dir .state/downloads/] [--port 9222]');
+if (!keyword || !idsArg) {
+  console.error('Usage: node wf-batch-download.js --q <keyword> --ids "0,2,5" [--type periodical] [--save-dir .state/downloads/] [--port 9222]');
   process.exit(1);
 }
+
+const ids = idsArg.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+if (ids.length === 0) { console.error('Error: --ids must be comma-separated numbers'); process.exit(1); }
+if (ids.length > 10) { console.error('Error: max 10 items'); process.exit(1); }
 
 fs.mkdirSync(saveDir, { recursive: true });
 
@@ -82,17 +86,10 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForSelector('div.normal-list', { timeout: 15000 });
 
-    const totalItems = await page.locator('div.normal-list input.ivu-checkbox-input').count();
-    const selectCount = Math.min(count, totalItems);
-    if (selectCount === 0) {
-      console.log(JSON.stringify({ error: 'no results found' }, null, 2));
-      process.exit(0);
-    }
-
-    // ── Select checkboxes ──
+    // ── Select checkboxes by --ids ──
     const cbs = page.locator('div.normal-list input.ivu-checkbox-input');
-    for (let i = 0; i < selectCount; i++) {
-      await cbs.nth(i).click({ force: true });
+    for (const id of ids) {
+      if (await cbs.nth(id).count() > 0) await cbs.nth(id).click({ force: true });
     }
     await new Promise(r => setTimeout(r, 1000));
 
