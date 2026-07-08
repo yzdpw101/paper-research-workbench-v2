@@ -2,7 +2,7 @@
  * ieee-batch-cite.js — IEEE Xplore batch citation export (no login needed)
  *
  * Usage:
- *   node ieee-batch-cite.js --q "keyword" [--count 3] [--format bibtex|plain|ris|refworks]
+ *   node ieee-batch-cite.js --q "keyword" --ids "0,2,5" [--format bibtex|plain|ris|refworks]
  *                          [--save-as <path>] [--mode launch|cdp]
  */
 import { launch } from './browser-launcher.js';
@@ -18,7 +18,7 @@ function opt(name, def) {
 }
 
 const keyword = opt('--q', '');
-const count = parseInt(opt('--count', '3'));
+const idsArg = opt('--ids', '');
 const format = opt('--format', 'bibtex');
 const saveAsPath = opt('--save-as', '');
 const dlMode = opt('--mode', 'launch');
@@ -26,12 +26,15 @@ const cdpPort = parseInt(opt('--cdp-port', '9222'));
 const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
 const headless = !process.argv.includes("--show");
 
-if (!keyword) {
-  console.error('Usage: node ieee-batch-cite.js --q <keyword> [--count 3] [--format bibtex|plain|ris|refworks] [--save-as <path>] [--mode launch|cdp]');
+if (!keyword || !idsArg) {
+  console.error('Usage: node ieee-batch-cite.js --q <keyword> --ids "0,2,5" [--format bibtex|plain|ris|refworks] [--save-as <path>] [--mode launch|cdp]');
   process.exit(1);
 }
 
-const searchUrl = 'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=' + encodeURIComponent(keyword) + '&highlight=true&returnType=SEARCH&matchPubs=true&rowsPerPage=' + Math.min(count, 10);
+const ids = idsArg.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+if (ids.length === 0) { console.error('Error: --ids must be comma-separated numbers'); process.exit(1); }
+
+const searchUrl = 'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=' + encodeURIComponent(keyword) + '&highlight=true&returnType=SEARCH&matchPubs=true&rowsPerPage=' + Math.max(...ids, 10);
 const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
 (async () => {
@@ -53,8 +56,13 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
       }
     } catch { /* popup may not exist */ }
 
-    // Select All on Page
-    await page.locator('label.results-actions-selectall').first().click();
+    // Select specific papers by --ids
+    const cbs = page.locator('input[aria-label="Select search result"]');
+    for (const id of ids) {
+      if (await cbs.nth(id).count() > 0) {
+        await cbs.nth(id).click({ force: true });
+      }
+    }
     await new Promise(r => setTimeout(r, 500));
 
     // Click Export

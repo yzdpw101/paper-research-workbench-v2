@@ -82,8 +82,8 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | `wf-chapter.js` | 万方学位论文分章下载（两步：`--action analyze` 查看树 → `--action download --ids "6,7"` 下载） | `--q` `--idx` `--ids` `--save-as` `--mode launch\|cdp` |
 | `ieee-figures.js` | IEEE 图表提取 | `--arnumber` `--out-dir`（先读 `ieee/figures.md`） |
 | `ieee-carsi-login.js` | IEEE CARSI SSO 登录 | `--port=9222`（仅 CDP 模式，直达 SSO 跳过 SeamlessAccess） |
-| `ieee-batch-cite.js` | IEEE 批量引用导出（不需登录） | `--q` `--count`(≤10) `--format bibtex\|plain\|ris\|refworks` `--save-as` `--mode launch\|cdp` |
-| `ieee-batch-download.js` | IEEE 批量 PDF 下载（需登录，≤10篇） | `--q` `--count`(≤10) `--save-as` `--mode launch\|cdp` |
+| `ieee-batch-cite.js` | IEEE 批量引用导出（不需登录） | `--q` `--ids "0,2,5"` `--format bibtex\|plain\|ris\|refworks` `--save-as` `--mode launch\|cdp` |
+| `ieee-batch-download.js` | IEEE 批量 PDF 下载（需登录，≤10篇） | `--q` `--ids "0,2,5"` `--save-as` `--mode launch\|cdp` |
 
 ### Core — 引用提取
 
@@ -92,7 +92,7 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | 脚本 | 用途 | 关键参数 |
 |---|---|---|
 | `wf-cite.js` | 单篇引用 | `--q` `--type` `--idx` `--format gb7714\|mla\|apa` |
-| `wf-batch-cite.js` | 批量引用 | `--q` `--type` `--count`(≤10) |
+| `wf-batch-cite.js` | 批量引用 | `--q` `--ids "0,2,5"` `--type` `--format gb7714|mla|apa` (CDP) |
 
 ### Parallel — 并发
 
@@ -100,9 +100,9 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 | 脚本 | 用途 | 示例 |
 |---|---|---|
-| `parallel-search.js` | 多关键词并行搜索 | `--q "kw1,kw2" --platform ieee|wanfang` `--mode launch|cdp` |\|wanfang` |
+| `parallel-search.js` | 多关键词并行搜索 | `--q "kw1,kw2" --platform ieee\|wanfang` `--mode launch\|cdp` |
 | `parallel-download.js` | IEEE 多论文并行下载 | `--arnumbers "n1,n2" --save-dir "..."` |
-| `wf-batch-download.js` | 万方期刊批量下载 | `--q` `--type periodical` `--count` `--save-dir`（仅 CDP） |
+| `wf-batch-download.js` | 万方期刊批量下载 | `--q` `--ids "0,2,5"` `--type periodical` `--save-dir` (CDP) |
 
 ### Utility — 底层模块
 

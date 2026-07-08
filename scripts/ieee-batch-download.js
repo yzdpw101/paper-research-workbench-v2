@@ -1,8 +1,8 @@
 /**
- * ieee-batch-download.js — IEEE Xplore batch PDF download (needs CARSI login)
+ * ieee-batch-download.js — IEEE Xplore batch PDF download (needs login)
  *
  * Usage:
- *   node ieee-batch-download.js --q "keyword" [--count 3] [--save-as <path>]
+ *   node ieee-batch-download.js --q "keyword" --ids "0,2,5" [--save-as <path>]
  *                               [--mode launch|cdp]
  *
  * Max 10 papers, 500MB total. Requires institutional login (IP or CARSI SSO).
@@ -20,17 +20,21 @@ function opt(name, def) {
 }
 
 const keyword = opt('--q', '');
-const count = Math.min(parseInt(opt('--count', '3')), 10);
+const idsArg = opt('--ids', '');
 const saveAsPath = opt('--save-as', '');
 const dlMode = opt('--mode', 'launch');
 const cdpPort = parseInt(opt('--cdp-port', '9222'));
 const browserType = opt('--browser', dlMode === 'cdp' ? 'chrome' : '');
 const headless = !process.argv.includes('--show');
 
-if (!keyword) {
-  console.error('Usage: node ieee-batch-download.js --q <keyword> [--count 3] [--save-as <path>] [--mode launch|cdp]');
+if (!keyword || !idsArg) {
+  console.error('Usage: node ieee-batch-download.js --q <keyword> --ids "0,2,5" [--save-as <path>] [--mode launch|cdp]');
   process.exit(1);
 }
+
+const ids = idsArg.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+if (ids.length === 0) { console.error('Error: --ids must be comma-separated numbers'); process.exit(1); }
+if (ids.length > 10) { console.error('Error: max 10 papers'); process.exit(1); }
 
 const searchUrl = 'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=' + encodeURIComponent(keyword) + '&highlight=true&returnType=SEARCH&matchPubs=true&rowsPerPage=10';
 const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
@@ -58,8 +62,13 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
       }
     } catch { /* popup may not exist */ }
 
-    // Select results
-    await page.locator('label.results-actions-selectall').first().click();
+    // Select specific papers by --ids
+    const cbs = page.locator('input[aria-label="Select search result"]');
+    for (const id of ids) {
+      if (await cbs.nth(id).count() > 0) {
+        await cbs.nth(id).click({ force: true });
+      }
+    }
     await new Promise(r => setTimeout(r, 500));
 
     // Click Download PDFs — use JS to bypass modal overlay
@@ -71,7 +80,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
         const dd = path.dirname(dest);
         if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
         try { const s = await dl.createReadStream(); const ws = fs.createWriteStream(dest); await new Promise((res, rej) => { s.pipe(ws); ws.on('finish', res); ws.on('error', rej); s.on('error', rej); }); } catch { await dl.saveAs(dest); }
-        resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size, count } });
+        resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size, ids: ids.length } });
       };
       for (const p of browser.contexts()[0].pages()) p.on('download', onDl);
       browser.contexts()[0].on('page', p => p.on('download', onDl));

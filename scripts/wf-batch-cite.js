@@ -2,15 +2,15 @@
  * wf-batch-cite.js — Wanfang batch citation extraction (CDP mode)
  *
  * Usage:
- *   node wf-batch-cite.js --q <keyword> [--type periodical] [--count <n>] [--port 9222]
+ *   node wf-batch-cite.js --q <keyword> --ids "0,2,5" [--type periodical] [--port 9222]
  *
  * --q      : Search keyword (required)
+ * --ids    : Result indices to cite, comma-separated, 0-based, max 10
  * --type   : paper|periodical|conference, default "periodical" (thesis not supported for batch)
- * --count  : Number of items to select, default 3 (max 10)
  * --port   : CDP port, default 9222
  *
  * Flow:
- *   Search page → select checkboxes (force click) → click 批量引用
+ *   Search page → select checkboxes by ids → click 批量引用
  *   → new tab /export → extract GB/T 7714 citations → close tab
  *
  * Browser: CDP mode only. Citation extraction REQUIRES CARSI login (wf-carsi-login.js).
@@ -108,7 +108,7 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
 
     await exportTab.close();
 
-    console.log(JSON.stringify({ keyword, type: wfType, selected: selectCount, citations }, null, 2));
+    console.log(JSON.stringify({ keyword, type: wfType, selected: ids.length, citations }, null, 2));
     process.exit(0);
 
   } catch (err) {

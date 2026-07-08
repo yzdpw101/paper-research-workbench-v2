@@ -2,12 +2,12 @@
  * wf-batch-download.js — Wanfang batch download (CDP mode)
  *
  * Usage:
- *   node wf-batch-download.js --q <keyword> [--type periodical] [--count <n>]
+ *   node wf-batch-download.js --q <keyword> --ids "0,2,5" [--type periodical]
  *                             [--save-dir <dir>] [--port 9222]
  *
  * --q        : Search keyword (required)
+ * --ids      : Result indices to download, comma-separated, 0-based, max 10
  * --type     : paper|periodical|conference, default "periodical" (thesis NOT supported)
- * --count    : Number of items to select, default 3 (max 10)
  * --save-dir : Output directory, default ".state/downloads/"
  * --port     : CDP port, default 9222
  *
@@ -159,7 +159,7 @@ async function pollDownloadDir(dir, knownFiles, timeout = 120000) {
         ok: true,
         keyword,
         type: wfType,
-        selected: selectCount,
+        selected: ids.length,
         download: { name: filename, path: dest, size: fs.statSync(dest).size },
       }, null, 2));
     } else {
