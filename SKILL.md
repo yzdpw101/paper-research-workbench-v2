@@ -183,13 +183,13 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 ## 首次设置
 
-如果 `.state/.setup-done` 不存在，需要先完成首次设置。推荐使用交互式向导：
+如果 `.state/.setup-done` 不存在，引导用户完成：
 
-```bash
-node ${SKILL_DIR}/scripts/init-wizard.js
-```
+1. 询问浏览器偏好（Chrome/Edge 推荐，Firefox 仅机构网络）
+2. 安装依赖：`npm install playwright` + `npx playwright install chromium`
+3. 创建 `.state/.setup-done` 标记
 
-向导会自动检测浏览器、安装 Playwright、配置网络模式和凭据加密。详见 `references/setup.md`。
+详见 `references/setup.md`。
 
 ## 注意事项
 

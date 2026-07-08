@@ -1,35 +1,26 @@
-# First-time Setup (v2)
+# First-time Setup
 
-首次使用时按以下步骤引导。已设置则跳过（检查 `.state/.setup-done`）。
+首次使用需完成以下步骤，完成后创建 `.state/.setup-done` 标记。
 
-## 浏览器选择
+## AI 引导设置（推荐）
 
-首次运行时会询问浏览器偏好：
+AI 检测到 `.state/.setup-done` 不存在时，直接询问：
 
-1. **Chrome / Edge**（推荐）— launch 和 CDP 模式全支持，机构和非机构网络均可使用
-2. **Firefox** — 仅支持机构网络。非机构网络无法 CARSI 登录和下载
+1. **浏览器选择**：「你用什么浏览器？① Chrome ② Edge ③ Firefox」
+   - Chrome/Edge → 全功能（launch + CDP）
+   - Firefox → ⚠️ 仅机构网络，无法 CARSI 登录
+2. **安装依赖**：`npm install playwright` + `npx playwright install chromium`
+3. **标记完成**：创建 `.state/.setup-done`
 
-若选 Firefox，需告知用户：`⚠️ Firefox 仅支持校园网/VPN 环境，非机构网络下无法登录和下载。`
+## 手动设置
 
-## Quick start (recommended)
-
-Interactive wizard handles everything — browser detection, installation, configuration, network questionnaire:
-
+```bash
+npm install playwright
+npx playwright install chromium
+echo "" > .state/.setup-done
 ```
-node "${SKILL_DIR}/scripts/init-wizard.js"
-```
 
-The wizard will:
-1. Check Node.js version + Playwright installation
-2. Detect system browsers (Chrome registry, Edge registry, Firefox path)
-3. Detect Playwright browsers (`npx playwright install --list`)
-4. Interactive browser selection (shows only detected + installable options)
-5. Auto-install browser if needed (`npx playwright install <browser>`)
-6. Launch test to verify browser works
-7. Network questionnaire: institutional network? → `networkMode='institutional'`; non-institutional → recommends CDP mode
-8. Optional: store IEEE/Wanfang credentials (encrypted via AES-256-GCM)
-9. Optional: enable CDP connection mode (Chrome/Edge only)
-10. Write `.state/.setup-done`
+默认使用 Chrome headless。要切换浏览器，编辑 `scripts/config.js` 或设环境变量 `PAPER_BROWSER_DEFAULT=firefox`。
 
 > **Master key**: First run asks you to set a master key (entered twice for confirmation). Only provided via PAPER_MASTER_KEY env var. Not stored on disk.
 
