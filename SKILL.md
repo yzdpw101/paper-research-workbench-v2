@@ -168,7 +168,6 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 - `ieee/figures.md` — IEEE 图表提取细节
 - `wanfang/chapters.md` — 万方学位论文分章下载细节
 - `references/download-flow.md` — 下载前网络环境判断与认证流程
-- `references/login-flow.md` — CARSI SSO 登录三种路径（完整/SSO 有效/Cookie 有效）
 
 ## 配置
 
@@ -197,7 +196,6 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 - **登录态误判**：`network-detector.js` 曾经在整个页面 body 中搜索机构名（如「大学」「图书馆」）来判断是否已登录，但万方页脚的友情链接中含合作机构名，导致误报。已修复为仅检测 header/topbar 区域中的登录状态元素（「退出登录」按钮或机构标识）。
 - **CDP 下载路径**：CDP 模式下 Playwright 无法拦截 Chrome 的下载事件，文件会存到 Chrome 默认下载目录。`wf-download.js` 会自动读取 Chrome Preferences 获取实际路径，然后将文件复制到 `--save-as` 目标位置。
-- **SSO 会话缓存**：CARSI 登录后，机构 SSO 服务器端会保留会话数小时。在此期间重新登录可跳过账号密码步骤（约 20-30 秒 vs 首次 60-90 秒）。详见 `references/login-flow.md`。
 - **批量任务**：多个脚本连续运行时加 `--no-kill`，否则后续脚本可能杀掉前一个脚本的浏览器进程。
 
 更多已知问题与解决方案见 `references/troubleshooting.md`。
@@ -208,7 +206,6 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 |---|---|
 | `references/setup.md` | 首次设置时 |
 | `references/download-flow.md` | 用户要求下载时 |
-| `references/login-flow.md` | CARSI 登录出问题时 |
 | `references/troubleshooting.md` | 遇到异常行为时 |
 | `wanfang/search-download.md` | 万方平台详细流程 |
 | `ieee/search-download.md` | IEEE 平台详细流程 |
