@@ -43,7 +43,7 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
 
 (async () => {
   const headless = !process.argv.includes("--show");
-  const { browser, page } = await launch({ headless });
+  const browserArg = opt("--browser", ""); const { browser, page } = await launch({ headless, browser: browserArg || undefined });
 
   await goto(page, url, {
     timeout: parseInt(opt('--nav-timeout', '60000')),
