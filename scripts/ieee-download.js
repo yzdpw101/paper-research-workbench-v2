@@ -138,6 +138,6 @@ const headless = !process.argv.includes("--show");
   });
 
   console.log(JSON.stringify(result, null, 2));
-  if (dlMode === 'cdp') { try { browser.close(); } catch {}; setTimeout(() => process.exit(0), 3000); }
+  if (dlMode === 'cdp') { try { browser.close(); } catch {}; process.exit(0); }
   else { await browser.close(); }
 })();

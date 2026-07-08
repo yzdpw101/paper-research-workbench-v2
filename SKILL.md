@@ -116,15 +116,12 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | `navigator.js` | 智能导航：指数退避重试、页面就绪检测、超时处理 |
 | `network-detector.js` | 网络环境检测：判断机构 IP 还是公网、下载是否可行 |
 | `credential-vault.js` | AES-256-GCM 凭据加密存储（PBKDF2 100K 迭代） |
-| `session-manager.js` | 登录会话管理，24 小时 TTL 自动过期 |
 | `cdp-connector.js` | Chrome DevTools Protocol 连接管理 |
 | `context-pool.js` | 浏览器上下文池（parallel-* 脚本使用） |
 | `batch-runner.js` | 批量任务调度与并发控制 |
-| `init-wizard.js` | 首次设置向导（模块，非 CLI：`import { run }` 后调用 `run()`） |
 | `credential-page.js` | 凭据输入表单 — 在浏览器中打开 HTML 页面供用户填写账号密码，加密存入 vault |
 | `launch-cdp.js` | 启动 CDP Chrome/Edge，完全脱离父进程（AI shell 超时不影响 Chrome） |
 | `detect-cdp-download.mjs` | 调试工具 — 检测 CDP 模式下 Chrome 的实际下载目录 |
-| `run.js` / `eval.js` | 通用 Playwright runner / 任意 JavaScript 求值 |
 
 ### 凭据设置流程
 

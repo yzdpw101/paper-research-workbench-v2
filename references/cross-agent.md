@@ -39,7 +39,6 @@
 | ------|------ |
 |  30 个脚本 | 搜索、下载、登录、批量等完整功能模块  |
 |  `config.js` | 纯代码，无配置文件，默认值 + PAPER_* 环境变量 |
-|  `init-wizard.js` | 替代 v1 的 `init.js` + `set-browser.js`  |
 |  Headless 默认 true | 如需可视化，设 `PAPER_BROWSER_HEADLESS=false`  |
 |  Chrome | ✅ 完整支持 | CDP + launch 双模式，反检测处理  |
 |  CDP 模式 | Chrome/Edge 需手动启动带 `--remote-debugging-port`，然后 `--mode cdp`  |

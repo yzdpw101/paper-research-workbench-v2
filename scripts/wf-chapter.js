@@ -211,7 +211,7 @@ const headless = !process.argv.includes("--show");
 
   if (dlMode === 'cdp') {
     try { browser.close(); } catch {}
-    setTimeout(() => process.exit(0), 3000);
+    process.exit(0);
   } else {
     await browser.close();
   }
