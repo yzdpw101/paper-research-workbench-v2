@@ -57,10 +57,20 @@ if (yearFilter && YEAR_FACET[wfType]) {
   const browserArg = opt('--browser', '');
   const { browser, page } = await launch({ headless, browser: browserArg || undefined });
 
-  await goto(page, url, {
-    timeout: parseInt(opt('--nav-timeout', '60000')),
-    waitFor: 'div.normal-list'
-  });
+  try {
+    await goto(page, url, {
+      timeout: parseInt(opt('--nav-timeout', '60000')),
+      waitFor: 'div.normal-list'
+    });
+  } catch {
+    const text = await page.evaluate(() => document.body?.innerText?.slice(0, 500) || '');
+    if (/没有检索到数据|没有找到/.test(text)) {
+      console.log(JSON.stringify({ noResults: true, total: 0, items: [] }, null, 2));
+      await browser.close();
+      process.exit(0);
+    }
+    throw;
+  }
 
   // Pagination: click through pages (Wanfang SPA ignores URL p= parameter)
   if (pageNum > 1) {

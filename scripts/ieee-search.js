@@ -45,10 +45,21 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
   const headless = !process.argv.includes("--show");
   const browserArg = opt("--browser", ""); const { browser, page } = await launch({ headless, browser: browserArg || undefined });
 
-  await goto(page, url, {
-    timeout: parseInt(opt('--nav-timeout', '60000')),
-    waitFor: 'a[href*="/document/"]',
-  });
+  try {
+    await goto(page, url, {
+      timeout: parseInt(opt('--nav-timeout', '60000')),
+      waitFor: 'a[href*="/document/"]',
+    });
+  } catch {
+    // Possibly 0 results or page error — check if page loaded
+    const text = await page.evaluate(() => document.body?.innerText?.slice(0, 500) || '');
+    if (/no results|not found|0 results|no documents/i.test(text) || !text.includes('IEEE')) {
+      console.log(JSON.stringify({ totalResults: 0, perPage: 0, totalPages: 0, items: [] }, null, 2));
+      await page.close();
+      process.exit(0);
+    }
+    throw; // re-throw if it's not a "no results" issue
+  }
 
   // Expand all abstracts if requested
   if (!noSnippet) {
