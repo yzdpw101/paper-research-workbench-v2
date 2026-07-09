@@ -47,7 +47,7 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
 
   try {
     await goto(page, url, {
-      timeout: parseInt(opt('--nav-timeout', '60000')),
+      timeout: 30000,
       waitFor: 'a[href*="/document/"]',
     });
   } catch {

@@ -59,7 +59,7 @@ if (yearFilter && YEAR_FACET[wfType]) {
 
   try {
     await goto(page, url, {
-      timeout: parseInt(opt('--nav-timeout', '60000')),
+      timeout: 30000,
       waitFor: 'div.normal-list'
     });
   } catch {
