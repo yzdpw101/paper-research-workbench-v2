@@ -127,7 +127,8 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | 脚本 | 用途 | 示例 |
 |---|---|---|
 | `parallel-search.js` | 多关键词并行搜索 | `--q "kw1,kw2" --platform ieee\|wanfang` `--mode launch\|cdp` |
-| `parallel-detail.js` | 多论文并行详情 | `--platform ieee\|wanfang --arnumbers "n1,n2"` `--mode launch\|cdp` |
+| `ieee-parallel-detail.js` | IEEE 多论文并行详情 | `--arnumbers "n1,n2,n3"` `--parallel 3` `--mode launch\|cdp` |
+| `wf-parallel-detail.js` | 万方多论文并行详情 | `--urls "url1,url2"` `--parallel 3` `--mode launch\|cdp` |
 | `parallel-download.js` | IEEE 多论文并行下载 | `--arnumbers "n1,n2" --save-dir "..."` |
 | `wf-batch-download.js` | 万方期刊批量下载 | `--q` `--ids "0,2,5"` `--type periodical` `--save-dir` `--mode launch|cdp` |
 
