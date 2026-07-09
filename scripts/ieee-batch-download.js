@@ -47,12 +47,11 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
   try {
     await goto(page, searchUrl, { timeout: 30000, waitFor: '.results-actions-selectall' });
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 5000));
 
     // Dismiss cookie/privacy popup if present (blocks download buttons in headless mode)
     try {
-      // Try multiple possible selectors for the accept button
-      for (const sel of ['button:has-text("Accept All")', 'a:has-text("Accept All")', 'button:has-text("Accept")', '.osano-cm-accept']) {
+      for (const sel of ['button:has-text("Accept All")', 'a:has-text("Accept All")', 'button:has-text("Accept")', '.osano-cm-accept', 'button[class*=accept]']) {
         const btn = page.locator(sel).first();
         if (await btn.count() > 0) {
           await btn.click({ force: true, timeout: 3000 });
@@ -61,6 +60,18 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
         }
       }
     } catch { /* popup may not exist */ }
+    // Fallback: try direct JS click if locator didn't work
+    try {
+      await page.evaluate(() => {
+        const btns = document.querySelectorAll('button');
+        for (const b of btns) {
+          if (b.textContent.trim() === 'Accept All' || b.textContent.trim() === 'Accept') {
+            b.click(); return;
+          }
+        }
+      });
+      await new Promise(r => setTimeout(r, 1000));
+    } catch {}
 
     // Clear any previous selections
     try { await page.locator("button:has-text(\"Clear\")").first().click({ force: true, timeout: 3000 }); await new Promise(r => setTimeout(r, 300)); } catch {}
