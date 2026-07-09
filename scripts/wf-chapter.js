@@ -171,7 +171,7 @@ const headless = !process.argv.includes("--show");
             const stream = await dl.createReadStream();
             const ws = fs.createWriteStream(dest);
             await new Promise((res, rej) => { stream.pipe(ws); ws.on('finish', res); ws.on('error', rej); stream.on('error', rej); });
-          } catch (_) { await dl.saveAs(dest); }
+          } catch (_) { try { fs.unlinkSync(dest); } catch {}; await dl.saveAs(dest); }
           resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size } });
         };
         // Bind to all pages — download event may fire on any page in the context
