@@ -38,7 +38,8 @@ fs.mkdirSync(saveDir, { recursive: true });
 const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURIComponent(keyword);
 
 (async () => {
-  const launchOpts = { headless: true, mode: dlMode, port: cdpPort };
+  const headless = !process.argv.includes('--show');
+  const launchOpts = { headless, mode: dlMode, port: cdpPort };
   if (dlMode === 'cdp') launchOpts.browser = 'chrome';
   const { browser, page } = await launch(launchOpts);
 
