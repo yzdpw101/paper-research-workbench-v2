@@ -1,5 +1,12 @@
 # 标准工作流
 
+## 步骤 0：确认网络环境
+
+**必须先问用户**：「你当前是什么网络？① 机构网络（校园网/VPN）② 非机构网络」
+
+- ① → launch 模式，不需加 `--mode cdp`
+- ② → 需先启动 CDP Chrome (`scripts\open-cdp.bat chrome`) + CARSI 登录，再加 `--mode cdp`
+
 ## 核心流程
 
 ```
