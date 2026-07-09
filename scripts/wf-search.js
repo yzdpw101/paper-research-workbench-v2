@@ -57,20 +57,25 @@ if (yearFilter && YEAR_FACET[wfType]) {
   const browserArg = opt('--browser', '');
   const { browser, page } = await launch({ headless, browser: browserArg || undefined });
 
-  try {
-    await goto(page, url, {
-      timeout: 30000,
-      waitFor: 'div.normal-list'
-    });
-  } catch {
-    const text = await page.evaluate(() => document.body?.innerText?.slice(0, 500) || '');
-    if (/没有检索到数据|没有找到/.test(text)) {
-      console.log(JSON.stringify({ noResults: true, total: 0, items: [] }, null, 2));
-      await browser.close();
-      process.exit(0);
-    }
-    throw;
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+  // Quick check for "no results" before waiting for selector
+  let noResult = false;
+  for (let i = 0; i < 10; i++) {
+    const text = await page.evaluate(() => document.body?.innerText?.slice(0, 1000) || '');
+    if (/没有检索到数据|没有找到您要的资源/.test(text)) { noResult = true; break; }
+    await new Promise(r => setTimeout(r, 500));
   }
+  if (noResult) {
+    console.log(JSON.stringify({ noResults: true, total: 0, items: [] }, null, 2));
+    await browser.close();
+    process.exit(0);
+  }
+
+  await goto(page, url, {
+    timeout: 30000,
+    waitFor: 'div.normal-list'
+  });
 
   // Pagination: click through pages (Wanfang SPA ignores URL p= parameter)
   if (pageNum > 1) {

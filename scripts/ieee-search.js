@@ -45,21 +45,25 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
   const headless = !process.argv.includes("--show");
   const browserArg = opt("--browser", ""); const { browser, page } = await launch({ headless, browser: browserArg || undefined });
 
-  try {
-    await goto(page, url, {
-      timeout: 30000,
-      waitFor: 'a[href*="/document/"]',
-    });
-  } catch {
-    // Possibly 0 results or page error — check if page loaded
-    const text = await page.evaluate(() => document.body?.innerText?.slice(0, 500) || '');
-    if (/no results|not found|0 results|no documents/i.test(text) || !text.includes('IEEE')) {
-      console.log(JSON.stringify({ totalResults: 0, perPage: 0, totalPages: 0, items: [] }, null, 2));
-      await page.close();
-      process.exit(0);
-    }
-    throw; // re-throw if it's not a "no results" issue
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+  // Quick check for "no results" before waiting for selector
+  let noResult = false;
+  for (let i = 0; i < 10; i++) {
+    const text = await page.evaluate(() => document.body?.innerText?.slice(0, 1000) || '');
+    if (/No results found|no results found|unable to find results/i.test(text)) { noResult = true; break; }
+    await new Promise(r => setTimeout(r, 500));
   }
+  if (noResult) {
+    console.log(JSON.stringify({ totalResults: 0, perPage: 0, totalPages: 0, items: [] }, null, 2));
+    await page.close();
+    process.exit(0);
+  }
+
+  await goto(page, url, {
+    timeout: 30000,
+    waitFor: 'a[href*="/document/"]',
+  });
 
   // Expand all abstracts if requested
   if (!noSnippet) {
