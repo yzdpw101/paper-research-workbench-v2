@@ -31,8 +31,8 @@ if (!keyword || !idsArg) {
   process.exit(1);
 }
 
-const ids = idsArg.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-if (ids.length === 0) { console.error('Error: --ids must be comma-separated numbers'); process.exit(1); }
+const ids = parseIds(idsArg);
+if (ids.length === 0) { console.error('Error: --ids must be valid numbers or ranges (e.g. "0,2,5-8")'); process.exit(1); }
 
 const searchUrl = 'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=' + encodeURIComponent(keyword) + '&highlight=true&returnType=SEARCH&matchPubs=true&rowsPerPage=' + Math.max(...ids, 10);
 const downloadDir = path.resolve(get('download.dir') || '.state/downloads');

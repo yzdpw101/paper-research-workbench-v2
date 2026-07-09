@@ -136,7 +136,7 @@ const headless = !process.argv.includes("--show");
       console.log(JSON.stringify({ action: 'analyze', totalNodes: nodes.length, nodes }, null, 2));
 
     } else if (action === 'download') {
-      const ids = idsArg.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+      const ids = parseIds(idsArg);
       if (ids.length === 0) throw new Error('--ids required for download (e.g. --ids "2,5,8")');
 
       // Expand all first to surface the checkboxes
