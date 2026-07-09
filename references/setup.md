@@ -2,13 +2,24 @@
 
 首次使用需完成以下步骤，完成后创建 `.state/.setup-done` 标记。
 
-## AI 引导设置（推荐）
+## 需要安装
 
-AI 检测到 `.state/.setup-done` 不存在时，直接询问：
+| 组件 | 命令 | 说明 |
+|------|------|------|
+| Node.js | https://nodejs.org | v18+（已安装跳过） |
+| Playwright | `npm install playwright` | Node.js 包 |
+| Chromium | `npx playwright install chromium` | 默认浏览器 |
+| Firefox（可选） | `npx playwright install firefox` | 仅机构网络 |
 
-1. **浏览器选择**：「你用什么浏览器？① Chrome ② Edge ③ Firefox」
+> Edge 不需要安装——使用系统自带。
+
+## AI 引导设置
+
+AI 检测到 `.state/.setup-done` 不存在时：
+
+1. **询问浏览器**：「你用什么浏览器？① Chrome ② Edge ③ Firefox」
    - 运行：`node scripts/set-browser.js chrome`（或 `edge` / `firefox`）
-   - Firefox 会自动提示 ⚠️ CDP 不可用
+   - Firefox 会自动提示 ⚠️ 仅机构网络
 2. **安装依赖**：`npm install playwright` + `npx playwright install chromium`
 3. **标记完成**：创建 `.state/.setup-done`
 
@@ -17,153 +28,29 @@ AI 检测到 `.state/.setup-done` 不存在时，直接询问：
 ```bash
 npm install playwright
 npx playwright install chromium
+node scripts/set-browser.js chrome
 echo "" > .state/.setup-done
 ```
 
-默认使用 Chrome headless。要切换浏览器，编辑 `scripts/config.js` 或设环境变量 `PAPER_BROWSER_DEFAULT=firefox`。
-
-> **Master key**: First run asks you to set a master key (entered twice for confirmation). Only provided via PAPER_MASTER_KEY env var. Not stored on disk.
-
-## Manual setup (if wizard unavailable)
-
-### Step 1: Install dependencies
-
-```
-npm install playwright
-```
-
-> `npm install playwright` installs the Node.js package. Browser binaries need separate install:
-> ```bash
-> npx playwright install firefox    # Firefox only
-> npx playwright install chromium   # Chromium (optional — Chrome/Edge use system installs)
-> ```
-
-### Step 2: Configure default browser
-
-Set via environment variables (no config file needed):
+## 后续：凭据设置（非机构网络需要）
 
 ```bash
-# Default browser (firefox / chrome / msedge)
-export PAPER_BROWSER_DEFAULT=firefox      # Linux/Mac
-set PAPER_BROWSER_DEFAULT=firefox          # Windows CMD
-$env:PAPER_BROWSER_DEFAULT="firefox"      # PowerShell
+$env:PAPER_MASTER_KEY="your-secret-key"
+node scripts/credential-page.js   # 在浏览器中填写凭据
 ```
 
-Or override per-command with `--browser`: `node scripts/wf-download.js --browser chrome ...`
+## CDP 模式（非机构网络）
 
-### Step 3: Verify environment
+需要系统 Chrome（非 Playwright Chromium），用户手动启动：
 
-```
-node "${SKILL_DIR}/scripts/wf-search.js" \
-  --url "https://ieeexplore.ieee.org" \
-  --code "document.title" \
-  --timeout 15000
-```
-
-Should return `{"success":true,...,"result":"IEEE Xplore"}`.
-
-### Step 4: Login (if needed)
-
-If on institutional network (IP auth): no login needed — access is automatic.
-
-If on non-institutional network:
-1. Open Chrome/Edge with CDP: `"${SKILL_DIR}/scripts/launch-cdp.js" chrome 9222`
-2. Log into IEEE/Wanfang manually in the opened browser
-3. All subsequent commands use `--mode cdp` to reuse the session
-
-### Step 5: Mark setup complete
-
-```
-echo "" > ".state/.setup-done"
+```bash
+scripts\open-cdp.bat chrome
+# 或
+node scripts/launch-cdp.js chrome
 ```
 
-## CDP mode (non-institutional network)
+## 验证环境
 
-CDP (Chrome DevTools Protocol) allows connecting to a user's already-running browser, sharing login state, proxy/VPN settings.
-
-### Launch browser with CDP
-
+```bash
+node scripts/wf-search.js --q "test" --rows 1 --no-snippet
 ```
-# Chrome
-"${SKILL_DIR}/scripts/launch-cdp.js" chrome 9222
-
-# Edge
-"${SKILL_DIR}/scripts/launch-cdp.js" edge 9222
-
-# Custom user data dir (optional)
-"${SKILL_DIR}/scripts/launch-cdp.js" chrome 9222 "C:\path\to\custom\profile"
-```
-
-### Use CDP in commands
-
-Add `--mode cdp` to any command:
-
-```
-node "${SKILL_DIR}/scripts/ieee-search.js" --q "machine learning" --mode cdp
-node "${SKILL_DIR}/scripts/wf-download.js" --q "人工智能" --type thesis --idx 0 --mode cdp
-```
-
-> **Note**: CDP only works with Chrome/Edge. Firefox does not support CDP. On non-institutional networks with Firefox, you'll get a clear error message suggesting to switch browsers.
-
-## Network modes
-
-|  Mode | Typical scenario | Recommended browser | Auth method  |
-| ------|-----------------|---------------------|------------- |
-|  `institutional` | On campus / IP-authenticated | Firefox, Chrome, Edge | IP auto-auth  |
-|  `non-institutional` | Home / VPN / public WiFi | Chrome, Edge | CDP + manual login  |
-
-Change network mode via environment variable:
-```
-# Force institutional mode
-PAPER_BROWSER_NETWORK_MODE=institutional node "${SKILL_DIR}/scripts/ieee-search.js" --q "..."
-
-# Force non-institutional mode
-PAPER_BROWSER_NETWORK_MODE=non-institutional node "${SKILL_DIR}/scripts/wf-search.js" --q "..."
-```
-
-## Switching default browser
-
-Set `PAPER_BROWSER_DEFAULT` env var to `chrome`, `firefox`, or `msedge`
-
-Or temporarily override on any command:
-```
-node "${SKILL_DIR}/scripts/ieee-search.js" --browser chrome --q "..."
-node "${SKILL_DIR}/scripts/wf-search.js" --browser msedge --q "..."
-```
-
-## Key paths
-
-|  Path | Purpose  |
-| ------|--------- |
-
-|  `.state/.browser` | Default browser (legacy, overwritten by config)  |
-|  `.state/.setup-done` | Setup sentinel  |
-
-|  `.state/downloads` | Download directory  |
-|  `.state/profiles/<browser>/` | Persistent browser profiles  |
-|  `.state/credentials.json.enc` | Encrypted credentials (AES-256-GCM)  |
-|  `.state/sessions/<platform>.json` | Login sessions with 24h TTL  |
-
-## Credential security
-
-All credentials are encrypted with **AES-256-GCM** using PBKDF2 (100,000 iterations). Each service has an independent salt. The master key is only provided via PAPER_MASTER_KEY env var and never stored on disk.
-
-Before credential storage, the wizard prints:
-> "你的凭据将用 AES-256-GCM 加密存储在当前设备。主密码不会上传到任何服务器。"
-
-## Troubleshooting
-
-|  Symptom | Likely cause | Action  |
-| ---------|-------------|-------- |
-|  `Error: Cannot find module 'playwright'` | Dependencies not installed | `npm install playwright`  |
-|  `Firefox not found` | Browser binary not downloaded | `npx playwright install firefox`  |
-|  Login state lost | Cookie expired | Delete `.state/profiles/<browser>/` and re-login  |
-|  Chrome launch failed | System Chrome not installed | Install Chrome or use `--browser firefox`  |
-|  `Firefox not supported on non-institutional network` | Using Firefox outside campus | Switch to Chrome/Edge + CDP mode  |
-|  CDP connection refused | CDP browser not running | Run `launch-cdp.js chrome` or `launch-cdp.js edge` first  |
-|  SSL certificate error (Firefox + CARSI) | Firefox blocks self-signed certs | Switch to Chrome/Edge for CARSI login  |
-|  `network-detector` returns `public` but on campus | Network detection heuristics failed | Set `networkMode: "institutional"` manually  |
-|  Page redirected to `verify?ip=` | Captcha challenge | `network-detector` returns `captcha` type — user must complete manually  |
-|  Node.js not installed | Missing runtime | Install from https://nodejs.org (v18+ required)  |
-|  Script fails with `ERR_CONNECTION_CLOSED` / `ERR_TIMED_OUT` | Network instability | `navigator.js` auto-retries once after 3s  |
-
