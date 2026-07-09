@@ -32,6 +32,20 @@ description: >
 
 把两者分开意味着先搜后下，搜到确认要的论文再触发认证流程。这样避免了不必要的登录开销，也符合学术工作流的直觉：浏览 → 筛选 → 获取全文。
 
+## 搜索结果 vs 详情页
+
+**搜索返回的是摘要片段，不可用于深度分析。** 如需完整信息，用详情脚本：
+
+```bash
+# IEEE — 获取完整摘要、作者、DOI、关键词、引用数
+node ${SKILL_DIR}/scripts/ieee-detail.js --arnumber 8876906
+# 返回: { title, authors, abstract(完整), doi, citedBy, keywords, references }
+
+# 万方 — 获取完整元数据，自动识别资源类型
+node ${SKILL_DIR}/scripts/wf-detail.js --url "https://d.wanfangdata.com.cn/periodical/..."
+# 返回: { resourceType, title, download(可下载标记), fields: { doi, abstract, keywords, ... } }
+```
+
 ## 快速开始
 
 ### 搜索（任何网络，无需登录）
@@ -73,7 +87,6 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-carsi-login.js --port=9222
 PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "关键词" --type thesis --idx 0 --save-as "paper.pdf"
 ```
 
-> **下载前确认网络环境**：先问用户「你当前是什么网络？① 机构网络 ② 非机构网络 ③ 不确定」。流程详见 `references/download-flow.md`。
 
 ## 命令速查
 
@@ -172,11 +185,8 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 | Headless 兼容 | ✅ Chrome（反检测处理） | ✅ Chrome |
 
 详细文档：
-- `wanfang/search-download.md` — 万方搜索、下载、引用、分章完整流程
-- `ieee/search-download.md` — IEEE 搜索、下载、图表提取流程
 - `ieee/figures.md` — IEEE 图表提取细节
 - `wanfang/chapters.md` — 万方学位论文分章下载细节
-- `references/download-flow.md` — 下载前网络环境判断与认证流程
 
 ## 配置
 
@@ -199,25 +209,12 @@ PAPER_MASTER_KEY=<key> node ${SKILL_DIR}/scripts/wf-download.js --mode cdp --q "
 
 详见 `references/setup.md`。
 
-## 注意事项
-
-以下是从实际使用中积累的经验，了解它们可以避免踩坑：
-
-- **登录态误判**：`network-detector.js` 曾经在整个页面 body 中搜索机构名（如「大学」「图书馆」）来判断是否已登录，但万方页脚的友情链接中含合作机构名，导致误报。已修复为仅检测 header/topbar 区域中的登录状态元素（「退出登录」按钮或机构标识）。
-- **CDP 下载路径**：CDP 模式下 Playwright 无法拦截 Chrome 的下载事件，文件会存到 Chrome 默认下载目录。`wf-download.js` 会自动读取 Chrome Preferences 获取实际路径，然后将文件复制到 `--save-as` 目标位置。
-- **批量任务**：多个脚本连续运行时加 `--no-kill`，否则后续脚本可能杀掉前一个脚本的浏览器进程。
-
-更多已知问题与解决方案见 `references/troubleshooting.md`。
-
 ## 参考文件索引
 
 | 文件 | 何时读取 |
 |---|---|
 | `references/setup.md` | 首次设置时 |
-| `references/download-flow.md` | 用户要求下载时 |
 | `references/troubleshooting.md` | 遇到异常行为时 |
-| `wanfang/search-download.md` | 万方平台详细流程 |
-| `ieee/search-download.md` | IEEE 平台详细流程 |
 | `ieee/figures.md` | IEEE 图表提取 |
 | `ieee/automation.md` | IEEE CARSI 登录、批量引用、批量下载 |
 | `wanfang/chapters.md` | 万方分章下载 |
