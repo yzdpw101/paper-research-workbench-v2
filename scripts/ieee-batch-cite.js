@@ -60,7 +60,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
     } catch { /* popup may not exist */ }
 
     // Clear any previous selections
-    try { await page.locator("button:has-text("Clear")").first().click({ force: true, timeout: 3000 }); await new Promise(r => setTimeout(r, 300)); } catch {}
+    try { await page.locator("button:has-text(\"Clear\")").first().click({ force: true, timeout: 3000 }); await new Promise(r => setTimeout(r, 300)); } catch {}
     // Select specific papers by --ids
     const cbs = page.locator('input[aria-label="Select search result"]');
     for (const id of ids) {
