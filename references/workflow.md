@@ -30,9 +30,11 @@ node scripts/ieee-detail.js --arnumber <N>
 node scripts/wf-download.js --q "关键词" --type thesis --idx 0 --save-as "paper.pdf"
 node scripts/ieee-download.js --arnumber <N> --save-as "paper.pdf"
 
-# 4. 批量引用/下载
-node scripts/ieee-batch-cite.js --q "keyword" --ids "0-4" --format bibtex --save-as "cite.txt"
+# 4. 批量下载/引用
+node scripts/wf-batch-download.js --q "关键词" --ids "0-2" --type periodical --save-dir "./" --mode launch
 node scripts/ieee-batch-download.js --q "keyword" --ids "0-2" --save-as "papers.zip"
+node scripts/wf-batch-cite.js --q "关键词" --ids "0-4" --type periodical --mode launch
+node scripts/ieee-batch-cite.js --q "keyword" --ids "0-4" --format bibtex --save-as "cite.txt"
 ```
 
 ## 非机构网络
