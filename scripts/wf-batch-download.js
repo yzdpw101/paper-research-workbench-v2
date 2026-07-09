@@ -73,11 +73,7 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
       dlResolve = resolve;
       const onDl = async (dl) => {
         const dest = path.join(saveDir, dl.suggestedFilename());
-        try {
-          const s = await dl.createReadStream();
-          const ws = fs.createWriteStream(dest);
-          await new Promise((res, rej) => { s.pipe(ws); ws.on('finish', res); ws.on('error', rej); s.on('error', rej); });
-        } catch { await dl.saveAs(dest); }
+        await dl.saveAs(dest);
         resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size, selected: ids.length } });
       };
       for (const p of browser.contexts()[0].pages()) p.on('download', onDl);

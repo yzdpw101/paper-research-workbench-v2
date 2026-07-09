@@ -102,7 +102,7 @@ const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
         const dest = saveAsPath || path.join(downloadDir, dl.suggestedFilename());
         const dd = path.dirname(dest);
         if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
-        try { const s = await dl.createReadStream(); const ws = fs.createWriteStream(dest); await new Promise((res, rej) => { s.pipe(ws); ws.on('finish', res); ws.on('error', rej); s.on('error', rej); }); } catch { await dl.saveAs(dest); }
+        await dl.saveAs(dest)
         resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size, format } });
       };
       for (const p of browser.contexts()[0].pages()) p.on('download', onDl);
