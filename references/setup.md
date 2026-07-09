@@ -7,11 +7,13 @@
 | 组件 | 命令 | 说明 |
 |------|------|------|
 | Node.js | https://nodejs.org | v18+（已安装跳过） |
-| Playwright | `npm install playwright` | Node.js 包 |
+| Playwright | `npm install playwright` | 推荐装到 `%USERPROFILE%`，全局共享 |
 | Chromium | `npx playwright install chromium` | 默认浏览器 |
 | Firefox（可选） | `npx playwright install firefox` | 仅机构网络 |
 
 > Edge 不需要安装——使用系统自带。
+>
+> **关于 node_modules**：本项目不携带 `node_modules/`。Playwright 可以装到用户家目录（`cd %USERPROFILE% && npm install playwright`），Node.js 会向上查找自动解析。多个 skill 项目共享一份安装。
 
 ## AI 引导设置
 
