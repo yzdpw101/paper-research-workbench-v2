@@ -72,8 +72,15 @@ const searchUrl = 'https://s.wanfangdata.com.cn/' + wfType + '?q=' + encodeURICo
     const dlPromise = dlMode !== 'cdp' ? new Promise(resolve => {
       dlResolve = resolve;
       const onDl = async (dl) => {
-        const dest = path.join(saveDir, dl.suggestedFilename());
-        try { fs.unlinkSync(dest); } catch {} // remove if exists
+        let dest = path.join(saveDir, dl.suggestedFilename());
+        // Avoid EBUSY if file is open — append counter
+        let counter = 1;
+        while (fs.existsSync(dest)) {
+          const ext = path.extname(dest);
+          const base = path.basename(dest, ext);
+          dest = path.join(saveDir, `${base} (${counter})${ext}`);
+          counter++;
+        }
         await dl.saveAs(dest);
         resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size, selected: ids.length } });
       };
