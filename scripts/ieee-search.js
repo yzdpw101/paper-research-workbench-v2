@@ -3,7 +3,7 @@
  *
  * Usage:
  *   node ieee-search.js --q <keyword> [--type <type>] [--year <YYYY-YYYY>]
- *                       [--rows <n>] [--page <n>] [--no-snippet]
+ *                       [--rows <n>] [--page <n>] [--no-snippet (omit abstracts)]
  *
  * --q       : Search keyword (required)
  * --type    : Journals|Conferences|Magazines|Books|Early Access Articles|Standards
@@ -32,7 +32,7 @@ const pageNum = opt('--page', '1');
 const noSnippet = process.argv.includes('--no-snippet');
 
 if (!keyword) {
-  console.error('Usage: node ieee-search.js --q <keyword> [--type Journals] [--year 2023-2025] [--rows 25] [--page 1] [--no-snippet]');
+  console.error('Usage: node ieee-search.js --q <keyword> [--type Journals] [--year 2023-2025] [--rows 25] [--page 1] [--no-snippet (omit abstracts)]');
   process.exit(1);
 }
 

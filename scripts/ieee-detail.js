@@ -45,7 +45,7 @@ if (!arnumber) {
     const b = raw.replace(/[\s]+/g, ' ');
 
     const accessReady = /\bSign Out\b/i.test(b) || /Access provided by/i.test(b);
-    if (!accessReady) return { accessReady, error: 'not logged in', warning: '未检测到登录态（可能是校园网IP认证，不影响使用）' };
+    if (!accessReady) return { accessReady, error: 'institutional access not detected', warning: 'This is normal on non-institutional networks. Try --browser firefox, or use CDP mode with ieee-carsi-login.js.' };
 
     let title = (document.querySelector('h1')?.textContent || '').trim().replace(/\s+/g, ' ');
     if (!title || title.length < 10) {

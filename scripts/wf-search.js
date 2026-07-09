@@ -2,7 +2,7 @@
  * wf-search.js — Wanfang search
  *
  * Usage:
- *   node wf-search.js --q <keyword> [--type <type>] [--page <n>] [--rows <n>] [--no-snippet]
+ *   node wf-search.js --q <keyword> [--type <type>] [--page <n>] [--rows <n>] [--no-snippet (omit abstracts)]
  *
  * --q          : Search keyword (required)
  * --type       : paper|periodical|thesis|conference|patent|standard|law, default "paper"
@@ -30,7 +30,7 @@ const yearFilter = opt('--year', '');
 const noSnippet = process.argv.includes('--no-snippet');
 
 if (!keyword) {
-  console.error('Usage: node wf-search.js --q <keyword> [--type thesis] [--page 1] [--rows 20] [--no-snippet]');
+  console.error('Usage: node wf-search.js --q <keyword> [--type thesis] [--page 1] [--rows 20] [--no-snippet (omit abstracts)]');
   process.exit(1);
 }
 
