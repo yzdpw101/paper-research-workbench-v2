@@ -63,7 +63,7 @@ node scripts/wf-chapter.js --action download --q "关键词" --idx 0 --ids "6-10
 ## 注意事项
 
 - `--no-snippet` 省略摘要，默认行为是**包含摘要**。想省 token 才加
-- 搜索结果中的 snippet 是**截断的**，不能当作完整文本分析
+- 搜索结果中的 snippet 是**截断的**，不能当作完整文本分析。必须用 `ieee-detail.js` 或 `wf-detail.js` 获取完整摘要
 - 下载前**先问用户网络环境**（机构/非机构/不确定）
 - IEEE 详情页可能出现 "Access not detected" 提示——不影响搜索，只影响下载
 - 万方分章下载的 `--ids` 来自 analyze 输出的节点编号
