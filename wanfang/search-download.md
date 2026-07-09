@@ -9,7 +9,7 @@
 
 ## Preflight
 
-v2 uses `browser-launcher.js` + `config.js`. `${SKILL_DIR}` resolves automatically. Run `init-wizard.js` once if `.state/.setup-done` is missing.
+v2 uses `browser-launcher.js` + `config.js`. `${SKILL_DIR}` resolves automatically. Run `set-browser.js` once if `.state/.setup-done` is missing.
 
 ## Search flow
 
@@ -95,7 +95,7 @@ node "${SKILL_DIR}/scripts/wf-download.js" \
 URL `p=<N>` does **not** work — SPA resets to p=1. Use bottom-pagination clicks via evaluate:
 
 ```bash
-node "${SKILL_DIR}/scripts/eval.js" \
+node "${SKILL_DIR}/scripts/wf-search.js" \
   --url "https://s.wanfangdata.com.cn/<type>?q=<encoded>&p=<N>" \
   --wait 1000 \
   --code "()=>{const btn=document.querySelector('.bottom-pagination .next');if(btn)btn.click();return{advanced:true};}"
@@ -108,7 +108,7 @@ After page change, re-run `wf-search.js` to get new results.
 ### Step 1: Query available filters
 
 ```
-node "${SKILL_DIR}/scripts/eval.js" \
+node "${SKILL_DIR}/scripts/wf-search.js" \
   --url "https://s.wanfangdata.com.cn/<type>?q=<encoded>" \
   --wait 2000 \
   --code "()=>{document.querySelectorAll('.facet-list-box .title, [class*=facet] h3').forEach(h=>h.click());const v=[];document.querySelectorAll('label.ivu-checkbox-wrapper .words').forEach(w=>{const t=(w.textContent| |'').trim();if(t&&t.length<50)v.push(t);});return[...new Set(v)];}"
@@ -117,7 +117,7 @@ node "${SKILL_DIR}/scripts/eval.js" \
 ### Step 2: Check desired filters + confirm
 
 ```bash
-node "${SKILL_DIR}/scripts/run.js" --code-file /tmp/wf-filter.js
+node "${SKILL_DIR}/scripts/wf-download.js" --code-file /tmp/wf-filter.js
 ```bash
 
 Where `/tmp/wf-filter.js`:

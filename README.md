@@ -9,8 +9,8 @@
 npm install playwright
 npx playwright install chromium
 
-# 运行首次设置向导（推荐）
-node scripts/init-wizard.js
+# 运行首次设置
+node scripts/set-browser.js chrome
 
 # 或手动设置
 # 1. 选择浏览器：编辑 scripts/config.js 中的 browser.default

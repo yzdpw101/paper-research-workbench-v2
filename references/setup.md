@@ -54,7 +54,7 @@ Or override per-command with `--browser`: `node scripts/wf-download.js --browser
 ### Step 3: Verify environment
 
 ```
-node "${SKILL_DIR}/scripts/eval.js" \
+node "${SKILL_DIR}/scripts/wf-search.js" \
   --url "https://ieeexplore.ieee.org" \
   --code "document.title" \
   --timeout 15000

@@ -33,7 +33,7 @@ https://ieeexplore.ieee.org/servlet/wayf.jsp?entityId=https://idp.njust.edu.cn/i
 - 格式选项: Plain Text / BibTeX / RIS / RefWorks
 - Download 按钮
 
-**脚本**：`ieee-batch-cite.js --q "..." --count 5 --format bibtex`
+**脚本**：`ieee-batch-cite.js --q "..." --ids "0-4" --format bibtex`
 
 ## 批量 PDF 下载（需要登录）
 
@@ -51,4 +51,4 @@ https://ieeexplore.ieee.org/servlet/wayf.jsp?entityId=https://idp.njust.edu.cn/i
 - 确认弹窗中的 Download 按钮
 - Download Confirmation 弹窗的关闭按钮
 
-**脚本**：`ieee-batch-download.js --q "..." --count 5 --save-as "..." --mode cdp`
+**脚本**：`ieee-batch-download.js --q "..." --ids "0-4" --save-as "..." --mode cdp`
