@@ -37,6 +37,25 @@ if (ids.length === 0) { console.error('Error: --ids must be valid numbers or ran
 const searchUrl = 'https://ieeexplore.ieee.org/search/searchresult.jsp?queryText=' + encodeURIComponent(keyword) + '&highlight=true&returnType=SEARCH&matchPubs=true&rowsPerPage=' + Math.max(...ids, 10);
 const downloadDir = path.resolve(get('download.dir') || '.state/downloads');
 
+function parseIds(raw) {
+  if (!raw) return [];
+  const seen = new Set();
+  const result = [];
+  for (const part of raw.split(',')) {
+    const trimmed = part.trim();
+    if (/^\d+$/.test(trimmed)) {
+      const n = parseInt(trimmed);
+      if (!seen.has(n)) { seen.add(n); result.push(n); }
+    } else if (/^(\d+)-(\d+)$/.test(trimmed)) {
+      const a = parseInt(RegExp.$1), b = parseInt(RegExp.$2);
+      for (let i = Math.min(a, b); i <= Math.max(a, b); i++) {
+        if (!seen.has(i)) { seen.add(i); result.push(i); }
+      }
+    }
+  }
+  return result.sort((a, b) => a - b);
+}
+
 (async () => {
   fs.mkdirSync(downloadDir, { recursive: true });
   const launchOpts = { headless, mode: dlMode, port: cdpPort };
