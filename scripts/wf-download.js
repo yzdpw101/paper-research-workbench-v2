@@ -212,5 +212,5 @@ const headless = !process.argv.includes("--show");
   if (dlMode === 'cdp') {
     try { browser.close(); } catch {}
     process.exit(0);
-  } else { await browser.close(); }
+  } else { await browser.close(); process.exit(0); }
 })();

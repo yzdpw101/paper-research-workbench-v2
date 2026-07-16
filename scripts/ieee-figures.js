@@ -96,7 +96,7 @@ if (!arnumber || !outDir) {
 
   if (!tabResult || !tabResult.clicked) {
     console.log(JSON.stringify({ error: 'no Figures tab found', details: tabResult }));
-    await browser.close(); return;
+    await browser.close(); process.exit(0); return;
   }
 
   // Wait for figures panel to render (P1: wait for actual figure images to load)
@@ -121,7 +121,7 @@ if (!arnumber || !outDir) {
 
   if (figData.count === 0) {
     console.log(JSON.stringify({ error: 'no figures found — click Figures tab first' }));
-    await browser.close();
+    await browser.close(); process.exit(0);
     return;
   }
 
@@ -145,5 +145,5 @@ if (!arnumber || !outDir) {
     files: poolResults,
   }, null, 2));
 
-  await browser.close();
+  await browser.close(); process.exit(0);
 })();

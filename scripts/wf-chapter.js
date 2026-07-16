@@ -217,6 +217,6 @@ const headless = !process.argv.includes("--show");
     try { browser.close(); } catch {}
     process.exit(0);
   } else {
-    await browser.close();
+    await browser.close(); process.exit(0);
   }
 })();

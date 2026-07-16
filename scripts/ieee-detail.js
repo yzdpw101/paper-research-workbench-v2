@@ -92,5 +92,5 @@ if (!arnumber) {
   });
 
   console.log(JSON.stringify(result, null, 2));
-  await browser.close();
+  await browser.close(); process.exit(0);
 })();

@@ -73,5 +73,5 @@ async function wanfangTask(context, taskIndex) {
   console.log(JSON.stringify(output, null, 2));
 
   if (dlMode === 'cdp') { try { browser.close(); } catch {}; process.exit(0); }
-  else { await browser.close(); }
+  else { await browser.close(); process.exit(0); }
 })();

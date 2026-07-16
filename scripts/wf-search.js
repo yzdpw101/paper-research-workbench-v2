@@ -68,7 +68,7 @@ if (yearFilter && YEAR_FACET[wfType]) {
   }
   if (noResult) {
     console.log(JSON.stringify({ noResults: true, total: 0, items: [] }, null, 2));
-    await browser.close();
+    await browser.close(); process.exit(0);
     process.exit(0);
   }
 
@@ -170,5 +170,5 @@ if (yearFilter && YEAR_FACET[wfType]) {
   }, { noSnippet, rows });
 
   console.log(JSON.stringify(result, null, 2));
-  await browser.close();
+  await browser.close(); process.exit(0);
 })();

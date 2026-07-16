@@ -47,23 +47,24 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
 
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-  // Quick check for "no results" before waiting for selector
-  let noResult = false;
-  for (let i = 0; i < 10; i++) {
-    const text = await page.evaluate(() => document.body?.innerText?.slice(0, 1000) || '');
-    if (/No results found|no results found|unable to find results/i.test(text)) { noResult = true; break; }
-    await new Promise(r => setTimeout(r, 500));
+  // Try to wait for results; if the selector never appears, treat as no results
+  try {
+    await goto(page, url, {
+      timeout: 30000,
+      waitFor: 'a[href*="/document/"]',
+    });
+  } catch (err) {
+    if (err.message && err.message.includes('SELECTOR_NOT_FOUND')) {
+      // Also do a quick check for no-results text patterns
+      const bodyText = await page.evaluate(() => document.body?.innerText?.slice(0, 2000) || '');
+      if (/no results|0 results|unable to find|did not match|not found|returned 0/i.test(bodyText)) {
+        console.log(JSON.stringify({ totalResults: 0, perPage: 0, totalPages: 0, items: [] }, null, 2));
+        await page.close();
+        process.exit(0);
+      }
+    }
+    throw err;
   }
-  if (noResult) {
-    console.log(JSON.stringify({ totalResults: 0, perPage: 0, totalPages: 0, items: [] }, null, 2));
-    await page.close();
-    process.exit(0);
-  }
-
-  await goto(page, url, {
-    timeout: 30000,
-    waitFor: 'a[href*="/document/"]',
-  });
 
   // Expand all abstracts if requested
   if (!noSnippet) {
@@ -111,5 +112,5 @@ url += '&rowsPerPage=' + rows + '&pageNumber=' + pageNum;
   }, { noSnippet });
 
   console.log(JSON.stringify(result, null, 2));
-  await browser.close();
+  await browser.close(); process.exit(0);
 })();
