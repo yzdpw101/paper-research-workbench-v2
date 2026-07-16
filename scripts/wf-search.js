@@ -135,6 +135,13 @@ if (yearFilter && YEAR_FACET[wfType]) {
           if (txt === '下载' || txt === '整篇下载') hasDownload = true;
         });
         const item = { idx: i, key: 'p' + currentPage + '#' + m[1], title, type: '[' + typeVal + ']', hasFull, hasDownload };
+        // Extract detail page URL from hidden ID
+        const idEl = el.querySelector('.title-id-hidden');
+        if (idEl) {
+          const idText = idEl.textContent.trim();
+          const p = idText.indexOf('_');
+          item.url = p > 0 ? 'https://d.wanfangdata.com.cn/' + idText.slice(0, p) + '/' + idText.slice(p + 1) : '';
+        }
         if (!opts.noSnippet) {
           const absStart = t.indexOf('摘要：');
           const absEnd = t.search(/在线阅读|整篇下载|分章下载|下载全文/);

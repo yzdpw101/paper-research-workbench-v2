@@ -64,7 +64,7 @@ if (!arnumber || !outDir) {
   fs.mkdirSync(outDir, { recursive: true });
 
   const headless = !process.argv.includes("--show");
-  const browserArg = opt("--browser", ""); const { browser, page } = await launch({ headless, browser: browserArg || undefined });
+  const browserArg = cliArg("--browser", ""); const { browser, page } = await launch({ headless, browser: browserArg || undefined });
 
   // 1. Navigate to detail page
   const detailUrl = 'https://ieeexplore.ieee.org/document/' + arnumber + '/';

@@ -164,22 +164,18 @@ const headless = !process.argv.includes("--show");
       const dlPromise = dlMode !== 'cdp' ? new Promise(resolve => {
         dlResolve = resolve;
         const onDownload = async (dl) => {
-          const dest = saveAsPath || path.join(downloadDir, dl.suggestedFilename());
+          let dest = saveAsPath || path.join(downloadDir, dl.suggestedFilename());
           const dd = path.dirname(dest);
           if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
-          try {
-            const stream = await dl.createReadStream();
-            const ws = fs.createWriteStream(dest);
-            await new Promise((res, rej) => { stream.pipe(ws); ws.on('finish', res); ws.on('error', rej); stream.on('error', rej); });
-          } catch (_) { let dest = path.join(saveDir, dl.suggestedFilename());
-        let counter = 1;
-        while (fs.existsSync(dest)) {
-          const ext = path.extname(dest);
-          const base = path.basename(dest, ext);
-          dest = path.join(saveDir, `${base} (${counter})${ext}`);
-          counter++;
-        }
-        await dl.saveAs(dest); }
+          // Auto-rename if file exists
+          let counter = 1;
+          while (fs.existsSync(dest)) {
+            const ext = path.extname(dest);
+            const base = path.basename(dest, ext);
+            dest = path.join(dd, `${base} (${counter})${ext}`);
+            counter++;
+          }
+          try { await dl.saveAs(dest); } catch { /* file may already be written */ }
           resolve({ status: 'ok', download: { name: dl.suggestedFilename(), path: dest, size: fs.statSync(dest).size } });
         };
         // Bind to all pages — download event may fire on any page in the context

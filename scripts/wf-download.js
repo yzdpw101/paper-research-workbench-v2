@@ -105,19 +105,10 @@ const headless = !process.argv.includes("--show");
     function listen(p) {
       p.on('download', async (dl) => {
         const filename = path.basename(dl.suggestedFilename());
-        const dd = path.dirname(path.join(downloadDir, filename));
+        let tempPath = path.join(downloadDir, filename);
+        const dd = path.dirname(tempPath);
         if (!fs.existsSync(dd)) fs.mkdirSync(dd, { recursive: true });
-        let tempPath;
-        try {
-          const stream = await dl.createReadStream();
-          const dest = path.join(downloadDir, filename);
-          const ws = fs.createWriteStream(dest);
-          await new Promise((res, rej) => { stream.pipe(ws); ws.on('finish', res); ws.on('error', rej); stream.on('error', rej); });
-          tempPath = dest;
-        } catch (_) {
-          await dl.saveAs(path.join(downloadDir, filename));
-          tempPath = path.join(downloadDir, filename);
-        }
+        try { await dl.saveAs(tempPath); } catch { /* file may already exist */ }
         finalize(tempPath, filename);
       });
     }
